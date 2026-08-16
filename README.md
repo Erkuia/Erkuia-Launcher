@@ -2,6 +2,8 @@
 
 Lightweight Customized Minecraft Launcher for RendogServer
 
+All image assets are based on RendogServer
+
 ## RendogServer
 
  - `1.20.4` version
