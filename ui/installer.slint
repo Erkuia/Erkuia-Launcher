@@ -80,6 +80,7 @@ component PathPage inherits Rectangle {
     in-out property <bool> run-after-install;
     in-out property <bool> create-desktop-shortcut;
     callback continue-clicked();
+    callback browse-clicked();
 
     background: transparent;
 
@@ -107,6 +108,7 @@ component PathPage inherits Rectangle {
             }
             Button {
                 text: "찾아보기";
+                clicked => { root.browse-clicked(); }
             }
         }
         CheckBox {
@@ -296,6 +298,7 @@ export component InstallerWindow inherits Window {
 
     callback continue-clicked();
     callback close-clicked();
+    callback browse-clicked();
 
     title: installer-name;
     width: 900px;
@@ -368,6 +371,7 @@ export component InstallerWindow inherits Window {
                 run-after-install <=> root.run-after-install;
                 create-desktop-shortcut <=> root.create-desktop-shortcut;
                 continue-clicked => { root.continue-clicked(); }
+                browse-clicked => { root.browse-clicked(); }
             }
 
             if current-step == 2: InstallingPage {

@@ -2,6 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 
+mod dialogs;
 mod download;
 mod elevation;
 mod install;
@@ -100,6 +101,17 @@ fn main() -> anyhow::Result<()> {
                 let _ = app.hide();
             }
             slint::quit_event_loop().ok();
+        }
+    });
+
+    app.on_browse_clicked({
+        let app = app.as_weak();
+        move || {
+            if let Some(app) = app.upgrade() {
+                if let Some(path) = dialogs::pick_install_directory(&app.get_install_path()) {
+                    app.set_install_path(path.display().to_string().into());
+                }
+            }
         }
     });
 
