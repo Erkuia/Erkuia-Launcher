@@ -26,8 +26,7 @@ pub fn register_uninstaller(
         message: "제거 프로그램 등록 중...".to_string(),
     });
 
-    let installer_path =
-        std::env::current_exe().context("failed to resolve current installer executable")?;
+    let installer_path = copy_uninstaller_to_install_dir(install_dir)?;
     let uninstall_command = format!(
         "\"{}\" --uninstall --install-dir \"{}\"",
         installer_path.display(),
@@ -83,16 +82,52 @@ pub fn run_uninstall_from_args(manifest: &Manifest) -> anyhow::Result<()> {
 fn run_uninstall(manifest: &Manifest, install_dir: &Path) -> anyhow::Result<()> {
     remove_shortcuts(manifest)?;
 
-    if install_dir.exists() {
-        std::fs::remove_dir_all(install_dir)
-            .with_context(|| format!("failed to remove {}", install_dir.display()))?;
-    }
-
     run_powershell(&format!(
         "Remove-Item -Path '{}' -Recurse -Force -ErrorAction SilentlyContinue",
         escape_powershell_single_quoted(UNINSTALL_KEY)
     ))
     .context("failed to remove uninstall registry entry")?;
+
+    schedule_install_dir_removal(install_dir)?;
+
+    Ok(())
+}
+
+fn copy_uninstaller_to_install_dir(install_dir: &Path) -> anyhow::Result<PathBuf> {
+    std::fs::create_dir_all(install_dir)
+        .with_context(|| format!("failed to create {}", install_dir.display()))?;
+
+    let current_exe =
+        std::env::current_exe().context("failed to resolve current installer executable")?;
+    let installed_uninstaller = install_dir.join("RendogLauncherInstaller.exe");
+
+    if current_exe != installed_uninstaller {
+        std::fs::copy(&current_exe, &installed_uninstaller).with_context(|| {
+            format!(
+                "failed to copy uninstaller from {} to {}",
+                current_exe.display(),
+                installed_uninstaller.display()
+            )
+        })?;
+    }
+
+    Ok(installed_uninstaller)
+}
+
+fn schedule_install_dir_removal(install_dir: &Path) -> anyhow::Result<()> {
+    if !install_dir.exists() {
+        return Ok(());
+    }
+
+    let script = format!(
+        "Start-Sleep -Seconds 1; Remove-Item -LiteralPath '{}' -Recurse -Force -ErrorAction SilentlyContinue",
+        escape_powershell_single_quoted(&install_dir.display().to_string())
+    );
+
+    Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &script])
+        .spawn()
+        .context("failed to schedule install directory removal")?;
 
     Ok(())
 }
