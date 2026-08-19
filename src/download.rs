@@ -149,7 +149,9 @@ fn sha256_file(file_path: &Path) -> anyhow::Result<String> {
     let mut buffer = [0_u8; 64 * 1024];
 
     loop {
-        let read = file.read(&mut buffer).context("failed to read file for hashing")?;
+        let read = file
+            .read(&mut buffer)
+            .context("failed to read file for hashing")?;
         if read == 0 {
             break;
         }

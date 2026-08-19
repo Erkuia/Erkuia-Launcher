@@ -77,6 +77,8 @@ component WelcomePage inherits Rectangle {
 
 component PathPage inherits Rectangle {
     in-out property <string> install-path;
+    in-out property <bool> run-after-install;
+    in-out property <bool> create-desktop-shortcut;
     callback continue-clicked();
 
     background: transparent;
@@ -106,6 +108,14 @@ component PathPage inherits Rectangle {
             Button {
                 text: "찾아보기";
             }
+        }
+        CheckBox {
+            text: "바탕화면 바로가기 만들기";
+            checked <=> root.create-desktop-shortcut;
+        }
+        CheckBox {
+            text: "설치 후 Rendog Launcher 실행";
+            checked <=> root.run-after-install;
         }
         Button {
             text: "설치";
@@ -163,9 +173,6 @@ component InstallingPage inherits Rectangle {
 }
 
 component CompletePage inherits Rectangle {
-    in-out property <bool> run-after-install;
-    in-out property <bool> create-desktop-shortcut;
-
     background: transparent;
 
     VerticalLayout {
@@ -194,13 +201,10 @@ component CompletePage inherits Rectangle {
             font-size: 25px;
             font-weight: 800;
         }
-        CheckBox {
-            text: "바탕화면 바로가기 만들기";
-            checked <=> root.create-desktop-shortcut;
-        }
-        CheckBox {
-            text: "설치 후 Rendog Launcher 실행";
-            checked <=> root.run-after-install;
+        Text {
+            text: "Rendog Launcher 설치가 완료됐어요.";
+            color: #6b7280;
+            font-size: 12px;
         }
         Button {
             text: "닫기";
@@ -288,6 +292,8 @@ export component InstallerWindow inherits Window {
 
             if current-step == 1: PathPage {
                 install-path <=> root.install-path;
+                run-after-install <=> root.run-after-install;
+                create-desktop-shortcut <=> root.create-desktop-shortcut;
                 continue-clicked => { root.continue-clicked(); }
             }
 
@@ -297,10 +303,7 @@ export component InstallerWindow inherits Window {
             }
 
             if current-step == 3: CompletePage {
-                run-after-install <=> root.run-after-install;
-                create-desktop-shortcut <=> root.create-desktop-shortcut;
             }
         }
     }
 }
-

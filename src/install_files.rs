@@ -39,13 +39,8 @@ pub fn install_downloaded_components(
             message: format!("{} 설치 중...", component.id),
         });
 
-        let copied = copy_with_progress(
-            component,
-            &target_path,
-            installed_before,
-            total_size,
-            emit,
-        )?;
+        let copied =
+            copy_with_progress(component, &target_path, installed_before, total_size, emit)?;
         installed_before = installed_before.saturating_add(copied);
 
         installed.push(InstalledComponent {
@@ -78,7 +73,9 @@ fn copy_with_progress(
     let mut copied = 0_u64;
 
     loop {
-        let read = source.read(&mut buffer).context("failed to read install source")?;
+        let read = source
+            .read(&mut buffer)
+            .context("failed to read install source")?;
         if read == 0 {
             break;
         }
@@ -120,7 +117,10 @@ fn safe_join(root: &Path, relative: &Path) -> anyhow::Result<PathBuf> {
     }
 
     for part in relative.components() {
-        if matches!(part, Component::ParentDir | Component::RootDir | Component::Prefix(_)) {
+        if matches!(
+            part,
+            Component::ParentDir | Component::RootDir | Component::Prefix(_)
+        ) {
             bail!("install target path escapes install directory");
         }
     }

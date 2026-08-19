@@ -87,7 +87,11 @@ fn known_folder_path(shell_folder_name: &str) -> anyhow::Result<PathBuf> {
     Ok(PathBuf::from(path))
 }
 
-fn create_shortcut(shortcut_path: &Path, target_path: &Path, working_dir: &Path) -> anyhow::Result<()> {
+fn create_shortcut(
+    shortcut_path: &Path,
+    target_path: &Path,
+    working_dir: &Path,
+) -> anyhow::Result<()> {
     let script = format!(
         "$w = New-Object -ComObject WScript.Shell; $s = $w.CreateShortcut('{}'); $s.TargetPath = '{}'; $s.WorkingDirectory = '{}'; $s.Save()",
         escape_powershell_single_quoted(&shortcut_path.display().to_string()),

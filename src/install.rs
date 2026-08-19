@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use anyhow::{bail, Context};
 
@@ -7,8 +10,7 @@ use crate::{
     install_files::{self, InstalledComponent},
     manifest::Manifest,
     progress::{InstallEvent, InstallStage},
-    shortcuts,
-    uninstall,
+    shortcuts, uninstall,
 };
 
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
@@ -16,6 +18,7 @@ type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 pub struct InstallOptions {
     pub install_dir: PathBuf,
     pub create_desktop_shortcut: bool,
+    pub run_after_install: bool,
 }
 
 pub struct InstallResult {
@@ -27,6 +30,7 @@ pub fn default_install_options(manifest: &Manifest) -> anyhow::Result<InstallOpt
     Ok(InstallOptions {
         install_dir: expand_windows_path(&manifest.install_plan.default_install_dir)?,
         create_desktop_shortcut: manifest.installer.default_create_desktop_shortcut,
+        run_after_install: manifest.installer.default_run_after_install,
     })
 }
 
@@ -49,9 +53,8 @@ pub fn run_install(
     })?;
 
     let cache_dir = installer_cache_dir()?;
-    std::fs::create_dir_all(&cache_dir).with_context(|| {
-        format!("failed to create installer cache {}", cache_dir.display())
-    })?;
+    std::fs::create_dir_all(&cache_dir)
+        .with_context(|| format!("failed to create installer cache {}", cache_dir.display()))?;
 
     emit(InstallEvent::Progress {
         stage: InstallStage::Prepare,
@@ -59,20 +62,24 @@ pub fn run_install(
         message: "설치 준비 완료".to_string(),
     });
 
-    let downloaded = download::download_ready_components(
-        &manifest.install_plan.components,
-        &cache_dir,
-        emit,
-    )?;
+    let downloaded =
+        download::download_ready_components(&manifest.install_plan.components, &cache_dir, emit)?;
 
     let installed_components =
         install_files::install_downloaded_components(&downloaded, &options.install_dir, emit)?;
 
-    shortcuts::create_launcher_shortcuts(&options.install_dir, options.create_desktop_shortcut, emit)
-        .context("failed to create launcher shortcuts")?;
+    shortcuts::create_launcher_shortcuts(
+        &options.install_dir,
+        options.create_desktop_shortcut,
+        emit,
+    )
+    .context("failed to create launcher shortcuts")?;
 
     uninstall::register_uninstaller(manifest, &options.install_dir, emit)
         .context("failed to register uninstaller")?;
+
+    maybe_launch_after_install(&options.install_dir, options.run_after_install, emit)
+        .context("failed to launch installed launcher")?;
 
     emit(InstallEvent::Progress {
         stage: InstallStage::Finalize,
@@ -93,8 +100,8 @@ fn installer_cache_dir() -> anyhow::Result<PathBuf> {
 
 fn expand_windows_path(path: &str) -> anyhow::Result<PathBuf> {
     if let Some(rest) = path.strip_prefix("%ProgramFiles%") {
-        let program_files =
-            std::env::var("ProgramFiles").context("ProgramFiles environment variable is missing")?;
+        let program_files = std::env::var("ProgramFiles")
+            .context("ProgramFiles environment variable is missing")?;
         return Ok(Path::new(&program_files).join(trim_path_separator(rest)));
     }
 
@@ -107,4 +114,31 @@ fn expand_windows_path(path: &str) -> anyhow::Result<PathBuf> {
 
 fn trim_path_separator(path: &str) -> &str {
     path.trim_start_matches(['\\', '/'])
+}
+
+fn maybe_launch_after_install(
+    install_dir: &Path,
+    run_after_install: bool,
+    emit: EventSink<'_>,
+) -> anyhow::Result<()> {
+    if !run_after_install {
+        return Ok(());
+    }
+
+    let launcher_path = install_dir.join("RendogLauncher.exe");
+    if !launcher_path.exists() {
+        emit(InstallEvent::Progress {
+            stage: InstallStage::Finalize,
+            local_percent: 50.0,
+            message: "런처 파일이 아직 준비되지 않아 자동 실행을 건너뛰었어요.".to_string(),
+        });
+        return Ok(());
+    }
+
+    Command::new(&launcher_path)
+        .current_dir(install_dir)
+        .spawn()
+        .with_context(|| format!("failed to launch {}", launcher_path.display()))?;
+
+    Ok(())
 }

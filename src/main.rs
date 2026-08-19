@@ -3,6 +3,7 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::Context;
 
 mod download;
+mod elevation;
 mod install;
 mod install_files;
 mod manifest;
@@ -10,12 +11,12 @@ mod progress;
 mod shortcuts;
 mod state;
 mod uninstall;
-mod elevation;
 
 slint::include_modules!();
 
 fn main() -> anyhow::Result<()> {
-    let manifest = Arc::new(manifest::load_manifest().context("failed to load installer manifest")?);
+    let manifest =
+        Arc::new(manifest::load_manifest().context("failed to load installer manifest")?);
 
     if uninstall::is_uninstall_mode() {
         return uninstall::run_uninstall_from_args(&manifest);
@@ -51,6 +52,7 @@ fn main() -> anyhow::Result<()> {
                         match elevation::restart_as_admin_for_install(
                             &app.get_install_path(),
                             app.get_create_desktop_shortcut(),
+                            app.get_run_after_install(),
                         ) {
                             Ok(()) => {
                                 let _ = app.hide();
@@ -73,6 +75,7 @@ fn main() -> anyhow::Result<()> {
                         Arc::clone(&manifest),
                         app.get_install_path().into(),
                         app.get_create_desktop_shortcut(),
+                        app.get_run_after_install(),
                     );
                     return;
                 }
@@ -92,6 +95,7 @@ fn run_headless_install(manifest: &Arc<manifest::Manifest>) -> anyhow::Result<()
             elevation::install_dir_from_args().context("missing --install-dir")?,
         ),
         create_desktop_shortcut: elevation::desktop_shortcut_from_args().unwrap_or(true),
+        run_after_install: elevation::run_after_install_from_args().unwrap_or(true),
     };
 
     install::run_install(manifest, &options, &mut |_| {})?;
@@ -103,11 +107,13 @@ fn start_install(
     manifest: Arc<manifest::Manifest>,
     install_path: String,
     create_desktop_shortcut: bool,
+    run_after_install: bool,
 ) {
     std::thread::spawn(move || {
         let options = install::InstallOptions {
             install_dir: PathBuf::from(install_path),
             create_desktop_shortcut,
+            run_after_install,
         };
 
         let result = install::run_install(&manifest, &options, &mut |event| {

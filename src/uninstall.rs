@@ -141,8 +141,8 @@ fn default_install_dir_from_manifest(manifest: &Manifest) -> anyhow::Result<Path
         .default_install_dir
         .strip_prefix("%ProgramFiles%")
     {
-        let program_files =
-            std::env::var("ProgramFiles").context("ProgramFiles environment variable is missing")?;
+        let program_files = std::env::var("ProgramFiles")
+            .context("ProgramFiles environment variable is missing")?;
         return Ok(Path::new(&program_files).join(rest.trim_start_matches(['\\', '/'])));
     }
 
