@@ -28,7 +28,7 @@ pub struct InstallResult {
 
 pub fn default_install_options(manifest: &Manifest) -> anyhow::Result<InstallOptions> {
     Ok(InstallOptions {
-        install_dir: expand_windows_path(&manifest.install_plan.default_install_dir)?,
+        install_dir: resolve_install_path(&manifest.install_plan.default_install_dir)?,
         create_desktop_shortcut: manifest.installer.default_create_desktop_shortcut,
         run_after_install: manifest.installer.default_run_after_install,
     })
@@ -98,7 +98,7 @@ fn installer_cache_dir() -> anyhow::Result<PathBuf> {
     Ok(std::env::temp_dir().join("rendog-launcher-installer"))
 }
 
-fn expand_windows_path(path: &str) -> anyhow::Result<PathBuf> {
+pub fn resolve_install_path(path: &str) -> anyhow::Result<PathBuf> {
     if let Some(rest) = path.strip_prefix("%ProgramFiles%") {
         let program_files = std::env::var("ProgramFiles")
             .context("ProgramFiles environment variable is missing")?;

@@ -31,7 +31,10 @@ fn main() -> anyhow::Result<()> {
 
     app.set_product_name(manifest.product.name.clone().into());
     app.set_installer_name(manifest.installer.name.clone().into());
-    app.set_install_path(manifest.install_plan.default_install_dir.clone().into());
+    let default_install_dir =
+        install::resolve_install_path(&manifest.install_plan.default_install_dir)
+            .unwrap_or_else(|_| PathBuf::from(&manifest.install_plan.default_install_dir));
+    app.set_install_path(default_install_dir.display().to_string().into());
     app.set_run_after_install(manifest.installer.default_run_after_install);
     app.set_create_desktop_shortcut(manifest.installer.default_create_desktop_shortcut);
     app.set_current_step(state::Step::Welcome.index());
@@ -108,7 +111,10 @@ fn main() -> anyhow::Result<()> {
         let app = app.as_weak();
         move || {
             if let Some(app) = app.upgrade() {
-                if let Some(path) = dialogs::pick_install_directory(&app.get_install_path()) {
+                let current_path = install::resolve_install_path(&app.get_install_path())
+                    .unwrap_or_else(|_| PathBuf::from(app.get_install_path().to_string()));
+
+                if let Some(path) = dialogs::pick_install_directory(&current_path) {
                     app.set_install_path(path.display().to_string().into());
                 }
             }
@@ -121,9 +127,9 @@ fn main() -> anyhow::Result<()> {
 
 fn run_headless_install(manifest: &Arc<manifest::Manifest>) -> anyhow::Result<()> {
     let options = install::InstallOptions {
-        install_dir: PathBuf::from(
-            elevation::install_dir_from_args().context("missing --install-dir")?,
-        ),
+        install_dir: install::resolve_install_path(
+            &elevation::install_dir_from_args().context("missing --install-dir")?,
+        )?,
         create_desktop_shortcut: elevation::desktop_shortcut_from_args().unwrap_or(true),
         run_after_install: elevation::run_after_install_from_args().unwrap_or(true),
     };
@@ -141,7 +147,8 @@ fn start_install(
 ) {
     std::thread::spawn(move || {
         let options = install::InstallOptions {
-            install_dir: PathBuf::from(install_path),
+            install_dir: install::resolve_install_path(&install_path)
+                .unwrap_or_else(|_| PathBuf::from(install_path)),
             create_desktop_shortcut,
             run_after_install,
         };
