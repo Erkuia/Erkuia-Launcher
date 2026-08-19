@@ -69,6 +69,27 @@ pub fn restart_as_admin_for_install(
     Ok(())
 }
 
+pub fn restart_as_admin_for_uninstall(install_dir: &std::path::Path) -> anyhow::Result<()> {
+    let exe = std::env::current_exe().context("failed to resolve current executable")?;
+    let args = format!(
+        "--uninstall --install-dir \"{}\"",
+        powershell::escape_double_quoted(&install_dir.display().to_string())
+    );
+    let script = format!(
+        "Start-Process -FilePath \"{}\" -ArgumentList '{}' -Verb RunAs -WindowStyle Hidden",
+        powershell::escape_double_quoted(&exe.display().to_string()),
+        powershell::escape_single_quoted(&args)
+    );
+    let output = powershell::output(&["-NoProfile", "-NonInteractive", "-Command", &script])
+        .context("failed to request administrator permission")?;
+
+    if !output.status.success() {
+        bail!("administrator permission request was not completed");
+    }
+
+    Ok(())
+}
+
 fn value_after_arg(name: &str) -> Option<String> {
     let mut args = std::env::args().skip(1);
 

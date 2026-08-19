@@ -27,7 +27,11 @@ Custom online installer for Rendog Launcher.
 - Shows real-time progress from actual download, verification, and file copy work.
 - Defaults `run after install` to checked.
 - Defaults `create desktop shortcut` to checked.
-- Includes uninstaller support as a planned installer feature.
+- Creates desktop and start menu shortcuts when `RendogLauncher.exe` is available.
+- Registers a Windows uninstaller entry under HKLM.
+- Re-runs the uninstaller with administrator permission when needed.
+- Skips launch and shortcut creation gracefully while `RendogLauncher.exe` is pending.
+- Applies a 60 second timeout to online component downloads.
 
 ## Current Install Components
 
@@ -73,15 +77,30 @@ Start screen
 
 ```text
 UI install button
+  -> request administrator permission at install start
   -> background install thread
   -> run_install()
   -> download_ready_components()
+  -> verify component size and SHA-256
   -> install_downloaded_components()
+  -> create shortcuts when launcher artifact exists
+  -> register Windows uninstaller
   -> InstallEvent::Progress updates Slint UI
   -> InstallEvent::Completed opens the complete screen
+  -> launch installed launcher when checked and available
 ```
 
-Shortcut creation, uninstaller registration, and launching `RendogLauncher.exe` are planned next-step integrations.
+## Uninstall Flow
+
+```text
+Windows Apps uninstall entry
+  -> RendogLauncherInstaller.exe --uninstall --install-dir <path>
+  -> request administrator permission when needed
+  -> remove desktop/start menu shortcuts
+  -> preserve user-data by moving it next to the install directory
+  -> remove HKLM uninstall entry
+  -> schedule install directory deletion
+```
 
 ## Build Check
 
@@ -95,4 +114,10 @@ If the current shell does not have Cargo in `PATH`, use:
 
 ```powershell
 & "$env:USERPROFILE\.cargo\bin\cargo.exe" check
+```
+
+For a release executable:
+
+```powershell
+& "$env:USERPROFILE\.cargo\bin\cargo.exe" build --release
 ```

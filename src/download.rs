@@ -2,6 +2,7 @@ use std::{
     fs::File,
     io::{Read, Write},
     path::{Component as PathComponent, Path, PathBuf},
+    time::Duration,
 };
 
 use anyhow::{bail, Context};
@@ -86,10 +87,23 @@ fn download_component(
         .url
         .as_ref()
         .context("component is ready but has no download url")?;
-    let mut response = reqwest::blocking::get(url).context("download request failed")?;
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .build()
+        .context("failed to prepare download client")?;
+    let mut response = client.get(url).send().with_context(|| {
+        format!(
+            "{} 다운로드 요청에 실패했어요. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.",
+            component.name
+        )
+    })?;
 
     if !response.status().is_success() {
-        bail!("download failed with HTTP {}", response.status());
+        bail!(
+            "{} 다운로드 실패: 서버가 HTTP {}를 반환했어요.",
+            component.name,
+            response.status()
+        );
     }
 
     let mut file = File::create(file_path).context("failed to create download file")?;

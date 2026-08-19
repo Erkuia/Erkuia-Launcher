@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context};
 
 use crate::{
+    elevation,
     manifest::Manifest,
     powershell,
     progress::{InstallEvent, InstallStage},
@@ -73,6 +74,11 @@ pub fn run_uninstall_from_args(manifest: &Manifest) -> anyhow::Result<()> {
     let install_dir = uninstall_install_dir_from_args()
         .or_else(|| default_install_dir_from_manifest(manifest).ok())
         .context("missing uninstall install directory")?;
+
+    if !elevation::is_running_as_admin().unwrap_or(false) {
+        elevation::restart_as_admin_for_uninstall(&install_dir)?;
+        return Ok(());
+    }
 
     run_uninstall(manifest, &install_dir)
 }
