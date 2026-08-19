@@ -82,6 +82,10 @@ pub fn run_uninstall_from_args(manifest: &Manifest) -> anyhow::Result<()> {
 fn run_uninstall(manifest: &Manifest, install_dir: &Path) -> anyhow::Result<()> {
     remove_shortcuts(manifest)?;
 
+    if manifest.uninstall.preserve_user_data_by_default {
+        preserve_user_data(install_dir)?;
+    }
+
     run_powershell(&format!(
         "Remove-Item -Path '{}' -Recurse -Force -ErrorAction SilentlyContinue",
         escape_powershell_single_quoted(UNINSTALL_KEY)
@@ -89,6 +93,30 @@ fn run_uninstall(manifest: &Manifest, install_dir: &Path) -> anyhow::Result<()> 
     .context("failed to remove uninstall registry entry")?;
 
     schedule_install_dir_removal(install_dir)?;
+
+    Ok(())
+}
+
+fn preserve_user_data(install_dir: &Path) -> anyhow::Result<()> {
+    let user_data_dir = install_dir.join("user-data");
+
+    if !user_data_dir.exists() {
+        return Ok(());
+    }
+
+    let backup_dir = install_dir.with_file_name("Rendog Launcher User Data");
+    if backup_dir.exists() {
+        std::fs::remove_dir_all(&backup_dir)
+            .with_context(|| format!("failed to replace {}", backup_dir.display()))?;
+    }
+
+    std::fs::rename(&user_data_dir, &backup_dir).with_context(|| {
+        format!(
+            "failed to preserve user data from {} to {}",
+            user_data_dir.display(),
+            backup_dir.display()
+        )
+    })?;
 
     Ok(())
 }

@@ -5,7 +5,10 @@ pub enum InstallEvent {
         local_percent: f32,
         message: String,
     },
-    Completed,
+    Completed {
+        install_dir: String,
+        installed_count: usize,
+    },
     Failed {
         code: String,
         message: String,

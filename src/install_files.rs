@@ -43,10 +43,7 @@ pub fn install_downloaded_components(
             copy_with_progress(component, &target_path, installed_before, total_size, emit)?;
         installed_before = installed_before.saturating_add(copied);
 
-        installed.push(InstalledComponent {
-            id: component.id.clone(),
-            target_path,
-        });
+        installed.push(InstalledComponent { target_path });
     }
 
     emit(InstallEvent::Progress {
@@ -138,6 +135,5 @@ fn percent(done: u64, total: u64) -> f32 {
 
 #[derive(Debug)]
 pub struct InstalledComponent {
-    pub id: String,
     pub target_path: PathBuf,
 }

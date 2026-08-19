@@ -190,9 +190,18 @@ fn dispatch_install_event(
                     ));
                     app.set_progress_message(message.into());
                 }
-                progress::InstallEvent::Completed => {
+                progress::InstallEvent::Completed {
+                    install_dir,
+                    installed_count,
+                } => {
                     app.set_progress_percent(100);
-                    app.set_progress_message("설치 완료".into());
+                    app.set_progress_message(
+                        format!(
+                            "설치 완료: {}개 항목이 {}에 설치됐어요.",
+                            installed_count, install_dir
+                        )
+                        .into(),
+                    );
                     app.set_current_step(state::Step::Complete.index());
                 }
                 progress::InstallEvent::Failed { code, message } => {

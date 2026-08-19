@@ -6,8 +6,7 @@ use std::{
 use anyhow::{bail, Context};
 
 use crate::{
-    download,
-    install_files::{self, InstalledComponent},
+    download, install_files,
     manifest::{ComponentStatus, Manifest},
     progress::{InstallEvent, InstallStage},
     shortcuts, uninstall,
@@ -21,24 +20,11 @@ pub struct InstallOptions {
     pub run_after_install: bool,
 }
 
-pub struct InstallResult {
-    pub install_dir: PathBuf,
-    pub installed_components: Vec<InstalledComponent>,
-}
-
-pub fn default_install_options(manifest: &Manifest) -> anyhow::Result<InstallOptions> {
-    Ok(InstallOptions {
-        install_dir: resolve_install_path(&manifest.install_plan.default_install_dir)?,
-        create_desktop_shortcut: manifest.installer.default_create_desktop_shortcut,
-        run_after_install: manifest.installer.default_run_after_install,
-    })
-}
-
 pub fn run_install(
     manifest: &Manifest,
     options: &InstallOptions,
     emit: EventSink<'_>,
-) -> anyhow::Result<InstallResult> {
+) -> anyhow::Result<()> {
     emit(InstallEvent::Progress {
         stage: InstallStage::Prepare,
         local_percent: 0.0,
@@ -88,12 +74,15 @@ pub fn run_install(
         local_percent: 100.0,
         message: "설치 완료".to_string(),
     });
-    emit(InstallEvent::Completed);
+    emit(InstallEvent::Completed {
+        install_dir: options.install_dir.display().to_string(),
+        installed_count: installed_components
+            .iter()
+            .filter(|component| component.target_path.exists())
+            .count(),
+    });
 
-    Ok(InstallResult {
-        install_dir: options.install_dir.clone(),
-        installed_components,
-    })
+    Ok(())
 }
 
 fn validate_required_components(manifest: &Manifest) -> anyhow::Result<()> {
