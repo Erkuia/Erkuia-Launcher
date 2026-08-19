@@ -7,12 +7,14 @@ use crate::{
     install_files::{self, InstalledComponent},
     manifest::Manifest,
     progress::{InstallEvent, InstallStage},
+    shortcuts,
 };
 
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
 pub struct InstallOptions {
     pub install_dir: PathBuf,
+    pub create_desktop_shortcut: bool,
 }
 
 pub struct InstallResult {
@@ -23,6 +25,7 @@ pub struct InstallResult {
 pub fn default_install_options(manifest: &Manifest) -> anyhow::Result<InstallOptions> {
     Ok(InstallOptions {
         install_dir: expand_windows_path(&manifest.install_plan.default_install_dir)?,
+        create_desktop_shortcut: manifest.installer.default_create_desktop_shortcut,
     })
 }
 
@@ -63,6 +66,9 @@ pub fn run_install(
 
     let installed_components =
         install_files::install_downloaded_components(&downloaded, &options.install_dir, emit)?;
+
+    shortcuts::create_launcher_shortcuts(&options.install_dir, options.create_desktop_shortcut, emit)
+        .context("failed to create launcher shortcuts")?;
 
     emit(InstallEvent::Progress {
         stage: InstallStage::Finalize,

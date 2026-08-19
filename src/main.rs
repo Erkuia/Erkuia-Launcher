@@ -7,6 +7,7 @@ mod install;
 mod install_files;
 mod manifest;
 mod progress;
+mod shortcuts;
 mod state;
 
 slint::include_modules!();
@@ -35,7 +36,12 @@ fn main() -> anyhow::Result<()> {
                     app.set_current_step(state::Step::Installing.index());
                     app.set_progress_percent(0);
                     app.set_progress_message("설치 준비 중...".into());
-                    start_install(app.as_weak(), Arc::clone(&manifest), app.get_install_path().into());
+                    start_install(
+                        app.as_weak(),
+                        Arc::clone(&manifest),
+                        app.get_install_path().into(),
+                        app.get_create_desktop_shortcut(),
+                    );
                     return;
                 }
 
@@ -48,10 +54,16 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn start_install(app: slint::Weak<InstallerWindow>, manifest: Arc<manifest::Manifest>, install_path: String) {
+fn start_install(
+    app: slint::Weak<InstallerWindow>,
+    manifest: Arc<manifest::Manifest>,
+    install_path: String,
+    create_desktop_shortcut: bool,
+) {
     std::thread::spawn(move || {
         let options = install::InstallOptions {
             install_dir: PathBuf::from(install_path),
+            create_desktop_shortcut,
         };
 
         let result = install::run_install(&manifest, &options, &mut |event| {
