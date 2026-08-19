@@ -9,11 +9,17 @@ mod manifest;
 mod progress;
 mod shortcuts;
 mod state;
+mod uninstall;
 
 slint::include_modules!();
 
 fn main() -> anyhow::Result<()> {
     let manifest = Arc::new(manifest::load_manifest().context("failed to load installer manifest")?);
+
+    if uninstall::is_uninstall_mode() {
+        return uninstall::run_uninstall_from_args(&manifest);
+    }
+
     let app = InstallerWindow::new().context("failed to create installer window")?;
 
     app.set_product_name(manifest.product.name.clone().into());

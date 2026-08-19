@@ -8,6 +8,7 @@ use crate::{
     manifest::Manifest,
     progress::{InstallEvent, InstallStage},
     shortcuts,
+    uninstall,
 };
 
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
@@ -69,6 +70,9 @@ pub fn run_install(
 
     shortcuts::create_launcher_shortcuts(&options.install_dir, options.create_desktop_shortcut, emit)
         .context("failed to create launcher shortcuts")?;
+
+    uninstall::register_uninstaller(manifest, &options.install_dir, emit)
+        .context("failed to register uninstaller")?;
 
     emit(InstallEvent::Progress {
         stage: InstallStage::Finalize,
