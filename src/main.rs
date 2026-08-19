@@ -1,8 +1,9 @@
 #![windows_subsystem = "windows"]
 
-use std::{path::PathBuf, sync::Arc};
+use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 
 use anyhow::Context;
+use slint::PhysicalPosition;
 
 mod dialogs;
 mod download;
@@ -17,6 +18,14 @@ mod state;
 mod uninstall;
 
 slint::include_modules!();
+
+#[derive(Clone, Copy)]
+struct TitleDragState {
+    window_position: PhysicalPosition,
+    pointer_x: f32,
+    pointer_y: f32,
+    scale_factor: f32,
+}
 
 fn main() -> anyhow::Result<()> {
     let manifest =
@@ -45,6 +54,47 @@ fn main() -> anyhow::Result<()> {
     app.set_progress_message("설치 준비 중...".into());
     app.set_error_code("".into());
     app.set_error_message("".into());
+
+    let title_drag_state = Rc::new(RefCell::new(None::<TitleDragState>));
+
+    app.on_title_drag_started({
+        let app = app.as_weak();
+        let title_drag_state = Rc::clone(&title_drag_state);
+        move |pointer_x, pointer_y| {
+            if let Some(app) = app.upgrade() {
+                *title_drag_state.borrow_mut() = Some(TitleDragState {
+                    window_position: app.window().position(),
+                    pointer_x,
+                    pointer_y,
+                    scale_factor: app.window().scale_factor(),
+                });
+            }
+        }
+    });
+
+    app.on_title_drag_moved({
+        let app = app.as_weak();
+        let title_drag_state = Rc::clone(&title_drag_state);
+        move |pointer_x, pointer_y| {
+            if let (Some(app), Some(state)) = (app.upgrade(), *title_drag_state.borrow()) {
+                let delta_x = ((pointer_x - state.pointer_x) * state.scale_factor).round() as i32;
+                let delta_y = ((pointer_y - state.pointer_y) * state.scale_factor).round() as i32;
+                app.window().set_position(PhysicalPosition::new(
+                    state.window_position.x + delta_x,
+                    state.window_position.y + delta_y,
+                ));
+            }
+        }
+    });
+
+    app.on_minimize_clicked({
+        let app = app.as_weak();
+        move || {
+            if let Some(app) = app.upgrade() {
+                app.window().set_minimized(true);
+            }
+        }
+    });
 
     app.on_continue_clicked({
         let app = app.as_weak();

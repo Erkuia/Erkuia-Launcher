@@ -130,9 +130,33 @@ component WindowCloseButton inherits Rectangle {
     }
 }
 
+component WindowMinimizeButton inherits Rectangle {
+    callback clicked();
+
+    width: 44px;
+    height: 32px;
+    background: touch-area.pressed ? #d1d5db : (touch-area.has-hover ? #e5e7eb : transparent);
+
+    Text {
+        text: "-";
+        color: #4b5563;
+        font-size: 18px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
 component TitleBar inherits Rectangle {
     in property <string> title;
+    callback drag-started(float, float);
+    callback drag-moved(float, float);
     callback close-clicked();
+    callback minimize-clicked();
 
     height: 32px;
     background: #fbfbfc;
@@ -154,8 +178,27 @@ component TitleBar inherits Rectangle {
             background: transparent;
         }
 
+        WindowMinimizeButton {
+            clicked => { root.minimize-clicked(); }
+        }
+
         WindowCloseButton {
             clicked => { root.close-clicked(); }
+        }
+    }
+
+    drag-area := TouchArea {
+        width: parent.width - 88px;
+        height: parent.height;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                root.drag-started(self.pressed-x / 1px, self.pressed-y / 1px);
+            }
+        }
+        moved => {
+            if self.pressed {
+                root.drag-moved(self.mouse-x / 1px, self.mouse-y / 1px);
+            }
         }
     }
 
@@ -439,6 +482,9 @@ export component InstallerWindow inherits Window {
     callback continue-clicked();
     callback close-clicked();
     callback browse-clicked();
+    callback title-drag-started(float, float);
+    callback title-drag-moved(float, float);
+    callback minimize-clicked();
 
     title: installer-name;
     no-frame: true;
@@ -451,6 +497,9 @@ export component InstallerWindow inherits Window {
 
         TitleBar {
             title: root.installer-name;
+            drag-started(x, y) => { root.title-drag-started(x, y); }
+            drag-moved(x, y) => { root.title-drag-moved(x, y); }
+            minimize-clicked => { root.minimize-clicked(); }
             close-clicked => { root.close-clicked(); }
         }
 
