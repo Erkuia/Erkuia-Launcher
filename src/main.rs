@@ -154,12 +154,13 @@ fn start_install(
         };
 
         let result = install::run_install(&manifest, &options, &mut |event| {
-            dispatch_install_event(app.clone(), event);
+            dispatch_install_event(app.clone(), Arc::clone(&manifest), event);
         });
 
         if let Err(error) = result {
             dispatch_install_event(
                 app,
+                Arc::clone(&manifest),
                 progress::InstallEvent::Failed {
                     code: "INSTALL_FAILED".to_string(),
                     message: error.to_string(),
@@ -169,7 +170,11 @@ fn start_install(
     });
 }
 
-fn dispatch_install_event(app: slint::Weak<InstallerWindow>, event: progress::InstallEvent) {
+fn dispatch_install_event(
+    app: slint::Weak<InstallerWindow>,
+    manifest: Arc<manifest::Manifest>,
+    event: progress::InstallEvent,
+) {
     let _ = slint::invoke_from_event_loop(move || {
         if let Some(app) = app.upgrade() {
             match event {
@@ -178,7 +183,11 @@ fn dispatch_install_event(app: slint::Weak<InstallerWindow>, event: progress::In
                     local_percent,
                     message,
                 } => {
-                    app.set_progress_percent(progress::overall_percent(stage, local_percent));
+                    app.set_progress_percent(progress::overall_percent_with_weights(
+                        &manifest.progress_weights,
+                        stage,
+                        local_percent,
+                    ));
                     app.set_progress_message(message.into());
                 }
                 progress::InstallEvent::Completed => {

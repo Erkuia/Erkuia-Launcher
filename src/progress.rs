@@ -24,15 +24,15 @@ pub enum InstallStage {
 }
 
 impl InstallStage {
-    pub fn range(self) -> ProgressRange {
+    pub fn manifest_weight(self, weights: &ProgressWeights) -> &ProgressWeight {
         match self {
-            Self::Prepare => ProgressRange::new(0.0, 5.0),
-            Self::Download => ProgressRange::new(5.0, 50.0),
-            Self::Verify => ProgressRange::new(50.0, 65.0),
-            Self::InstallFiles => ProgressRange::new(65.0, 88.0),
-            Self::Shortcuts => ProgressRange::new(88.0, 94.0),
-            Self::RegisterUninstaller => ProgressRange::new(94.0, 98.0),
-            Self::Finalize => ProgressRange::new(98.0, 100.0),
+            Self::Prepare => &weights.prepare,
+            Self::Download => &weights.download,
+            Self::Verify => &weights.verify,
+            Self::InstallFiles => &weights.install_files,
+            Self::Shortcuts => &weights.shortcuts,
+            Self::RegisterUninstaller => &weights.register_uninstaller,
+            Self::Finalize => &weights.finalize,
         }
     }
 }
@@ -54,6 +54,12 @@ impl ProgressRange {
     }
 }
 
-pub fn overall_percent(stage: InstallStage, local_percent: f32) -> i32 {
-    stage.range().map(local_percent)
+pub fn overall_percent_with_weights(
+    weights: &ProgressWeights,
+    stage: InstallStage,
+    local_percent: f32,
+) -> i32 {
+    let weight = stage.manifest_weight(weights);
+    ProgressRange::new(weight.start, weight.end).map(local_percent)
 }
+use crate::manifest::{ProgressWeight, ProgressWeights};

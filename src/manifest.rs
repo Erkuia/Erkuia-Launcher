@@ -9,6 +9,8 @@ pub struct Manifest {
     #[serde(rename = "installPlan")]
     pub install_plan: InstallPlan,
     pub uninstall: Uninstall,
+    #[serde(rename = "progressWeights")]
+    pub progress_weights: ProgressWeights,
 }
 
 #[derive(Debug, Deserialize)]
@@ -59,6 +61,25 @@ pub struct Uninstall {
     pub remove_start_menu_shortcut: bool,
     #[serde(rename = "preserveUserDataByDefault")]
     pub preserve_user_data_by_default: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ProgressWeights {
+    pub prepare: ProgressWeight,
+    pub download: ProgressWeight,
+    pub verify: ProgressWeight,
+    #[serde(rename = "installFiles")]
+    pub install_files: ProgressWeight,
+    pub shortcuts: ProgressWeight,
+    #[serde(rename = "registerUninstaller")]
+    pub register_uninstaller: ProgressWeight,
+    pub finalize: ProgressWeight,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ProgressWeight {
+    pub start: f32,
+    pub end: f32,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
