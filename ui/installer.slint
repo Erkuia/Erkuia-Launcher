@@ -7,6 +7,8 @@ export component InstallerWindow inherits Window {
     in-out property <int> current-step: 0;
     in-out property <bool> run-after-install: true;
     in-out property <bool> create-desktop-shortcut: true;
+    in-out property <int> progress-percent: 0;
+    in-out property <string> progress-message: "설치 준비 중...";
 
     callback continue-clicked();
 
@@ -82,7 +84,8 @@ export component InstallerWindow inherits Window {
             }
 
             if current-step == 2: InstallingPage {
-                percent: 0;
+                percent: root.progress-percent;
+                message: root.progress-message;
             }
 
             if current-step == 3: CompletePage {
@@ -209,6 +212,7 @@ component PathPage inherits Rectangle {
 
 component InstallingPage inherits Rectangle {
     in property <int> percent;
+    in property <string> message;
 
     background: transparent;
 
@@ -247,7 +251,7 @@ component InstallingPage inherits Rectangle {
             }
         }
         Text {
-            text: "설치 준비 중...";
+            text: message;
             color: #6b7280;
             font-size: 12px;
         }

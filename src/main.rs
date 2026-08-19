@@ -1,6 +1,7 @@
 use anyhow::Context;
 
 mod manifest;
+mod progress;
 mod state;
 
 slint::include_modules!();
@@ -15,6 +16,8 @@ fn main() -> anyhow::Result<()> {
     app.set_run_after_install(manifest.installer.default_run_after_install);
     app.set_create_desktop_shortcut(manifest.installer.default_create_desktop_shortcut);
     app.set_current_step(state::Step::Welcome.index());
+    app.set_progress_percent(0);
+    app.set_progress_message("설치 준비 중...".into());
 
     app.on_continue_clicked({
         let app = app.as_weak();
