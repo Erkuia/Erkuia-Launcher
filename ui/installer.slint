@@ -196,6 +196,7 @@ component TitleBar inherits Rectangle {
     in property <string> title;
     callback drag-started(float, float);
     callback drag-moved(float, float);
+    callback drag-ended();
     callback close-clicked();
     callback minimize-clicked();
 
@@ -246,6 +247,9 @@ component TitleBar inherits Rectangle {
         pointer-event(event) => {
             if event.kind == PointerEventKind.down {
                 root.drag-started(self.pressed-x / 1px, self.pressed-y / 1px);
+            }
+            if event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel {
+                root.drag-ended();
             }
         }
         moved => {
@@ -537,6 +541,7 @@ export component InstallerWindow inherits Window {
     callback browse-clicked();
     callback title-drag-started(float, float);
     callback title-drag-moved(float, float);
+    callback title-drag-ended();
     callback minimize-clicked();
 
     title: installer-name;
@@ -559,6 +564,7 @@ export component InstallerWindow inherits Window {
                 title: root.installer-name;
                 drag-started(x, y) => { root.title-drag-started(x, y); }
                 drag-moved(x, y) => { root.title-drag-moved(x, y); }
+                drag-ended => { root.title-drag-ended(); }
                 minimize-clicked => { root.minimize-clicked(); }
                 close-clicked => { root.close-clicked(); }
             }

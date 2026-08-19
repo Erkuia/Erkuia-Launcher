@@ -89,9 +89,18 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
+    app.on_title_drag_ended({
+        let title_drag_state = Rc::clone(&title_drag_state);
+        move || {
+            *title_drag_state.borrow_mut() = None;
+        }
+    });
+
     app.on_minimize_clicked({
         let app = app.as_weak();
+        let title_drag_state = Rc::clone(&title_drag_state);
         move || {
+            *title_drag_state.borrow_mut() = None;
             if let Some(app) = app.upgrade() {
                 app.window().set_minimized(true);
             }
@@ -155,7 +164,9 @@ fn main() -> anyhow::Result<()> {
 
     app.on_close_clicked({
         let app = app.as_weak();
+        let title_drag_state = Rc::clone(&title_drag_state);
         move || {
+            *title_drag_state.borrow_mut() = None;
             if let Some(app) = app.upgrade() {
                 if state::Step::from_index(app.get_current_step()) == state::Step::Complete
                     && app.get_run_after_install()
