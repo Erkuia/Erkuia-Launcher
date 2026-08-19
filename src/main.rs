@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
@@ -103,6 +105,13 @@ fn main() -> anyhow::Result<()> {
         let app = app.as_weak();
         move || {
             if let Some(app) = app.upgrade() {
+                if state::Step::from_index(app.get_current_step()) == state::Step::Complete
+                    && app.get_run_after_install()
+                {
+                    let install_dir = install::resolve_install_path(&app.get_install_path())
+                        .unwrap_or_else(|_| PathBuf::from(app.get_install_path().to_string()));
+                    let _ = install::launch_installed_launcher(&install_dir);
+                }
                 let _ = app.hide();
             }
             slint::quit_event_loop().ok();
@@ -134,6 +143,7 @@ fn run_headless_install(manifest: &Arc<manifest::Manifest>) -> anyhow::Result<()
         )?,
         create_desktop_shortcut: elevation::desktop_shortcut_from_args().unwrap_or(true),
         run_after_install: elevation::run_after_install_from_args().unwrap_or(true),
+        launch_after_install: true,
     };
 
     install::run_install(manifest, &options, &mut |_| {})?;
@@ -153,6 +163,7 @@ fn start_install(
                 .unwrap_or_else(|_| PathBuf::from(install_path)),
             create_desktop_shortcut,
             run_after_install,
+            launch_after_install: false,
         };
 
         let result = install::run_install(&manifest, &options, &mut |event| {

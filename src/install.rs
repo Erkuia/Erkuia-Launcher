@@ -18,6 +18,7 @@ pub struct InstallOptions {
     pub install_dir: PathBuf,
     pub create_desktop_shortcut: bool,
     pub run_after_install: bool,
+    pub launch_after_install: bool,
 }
 
 pub fn run_install(
@@ -66,8 +67,10 @@ pub fn run_install(
     uninstall::register_uninstaller(manifest, &options.install_dir, emit)
         .context("failed to register uninstaller")?;
 
-    maybe_launch_after_install(&options.install_dir, options.run_after_install, emit)
-        .context("failed to launch installed launcher")?;
+    if options.launch_after_install {
+        maybe_launch_after_install(&options.install_dir, options.run_after_install, emit)
+            .context("failed to launch installed launcher")?;
+    }
 
     emit(InstallEvent::Progress {
         stage: InstallStage::Finalize,
@@ -151,4 +154,18 @@ fn maybe_launch_after_install(
         .with_context(|| format!("failed to launch {}", launcher_path.display()))?;
 
     Ok(())
+}
+
+pub fn launch_installed_launcher(install_dir: &Path) -> anyhow::Result<bool> {
+    let launcher_path = install_dir.join("RendogLauncher.exe");
+    if !launcher_path.exists() {
+        return Ok(false);
+    }
+
+    Command::new(&launcher_path)
+        .current_dir(install_dir)
+        .spawn()
+        .with_context(|| format!("failed to launch {}", launcher_path.display()))?;
+
+    Ok(true)
 }

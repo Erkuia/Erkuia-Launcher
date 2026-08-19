@@ -40,6 +40,75 @@ component StepRow inherits Rectangle {
     }
 }
 
+component PrimaryButton inherits Rectangle {
+    in property <string> text;
+    callback clicked();
+
+    width: 92px;
+    height: 34px;
+    border-radius: 6px;
+    background: touch-area.pressed ? #075bc7 : (touch-area.has-hover ? #0968df : #0b73f6);
+
+    Text {
+        text: root.text;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component SecondaryButton inherits Rectangle {
+    in property <string> text;
+    callback clicked();
+
+    width: 78px;
+    height: 34px;
+    border-radius: 6px;
+    background: touch-area.pressed ? #edf2f7 : (touch-area.has-hover ? #f3f6f9 : transparent);
+    border-width: 1px;
+    border-color: #d5dbe3;
+
+    Text {
+        text: root.text;
+        color: #111827;
+        font-size: 12px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component TextButton inherits Rectangle {
+    in property <string> text;
+    callback clicked();
+
+    width: 50px;
+    height: 34px;
+    background: transparent;
+
+    Text {
+        text: root.text;
+        color: touch-area.has-hover ? #111827 : #4b5563;
+        font-size: 12px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
 component WelcomePage inherits Rectangle {
     in property <string> product-name;
     callback continue-clicked();
@@ -68,7 +137,7 @@ component WelcomePage inherits Rectangle {
             color: #6b7280;
             font-size: 12px;
         }
-        Button {
+        PrimaryButton {
             text: "시작";
             clicked => { root.continue-clicked(); }
         }
@@ -106,7 +175,7 @@ component PathPage inherits Rectangle {
             LineEdit {
                 text <=> root.install-path;
             }
-            Button {
+            SecondaryButton {
                 text: "찾아보기";
                 clicked => { root.browse-clicked(); }
             }
@@ -116,10 +185,10 @@ component PathPage inherits Rectangle {
             checked <=> root.create-desktop-shortcut;
         }
         CheckBox {
-            text: "설치 후 Rendog Launcher 실행";
+            text: "종료 시 런처 시작";
             checked <=> root.run-after-install;
         }
-        Button {
+        PrimaryButton {
             text: "설치";
             clicked => { root.continue-clicked(); }
         }
@@ -175,6 +244,7 @@ component InstallingPage inherits Rectangle {
 }
 
 component CompletePage inherits Rectangle {
+    in-out property <bool> run-after-install;
     callback close-clicked();
 
     background: transparent;
@@ -210,9 +280,22 @@ component CompletePage inherits Rectangle {
             color: #6b7280;
             font-size: 12px;
         }
-        Button {
-            text: "닫기";
-            clicked => { root.close-clicked(); }
+        CheckBox {
+            text: "종료 시 런처 시작";
+            checked <=> root.run-after-install;
+        }
+        HorizontalLayout {
+            spacing: 8px;
+
+            PrimaryButton {
+                text: "지금 실행";
+                clicked => { root.close-clicked(); }
+            }
+
+            TextButton {
+                text: "닫기";
+                clicked => { root.run-after-install = false; root.close-clicked(); }
+            }
         }
     }
 }
@@ -271,12 +354,12 @@ component ErrorPage inherits Rectangle {
         HorizontalLayout {
             spacing: 8px;
 
-            Button {
+            PrimaryButton {
                 text: "다시 시도";
                 clicked => { root.retry-clicked(); }
             }
 
-            Button {
+            TextButton {
                 text: "닫기";
                 clicked => { root.close-clicked(); }
             }
@@ -380,6 +463,7 @@ export component InstallerWindow inherits Window {
             }
 
             if current-step == 3: CompletePage {
+                run-after-install <=> root.run-after-install;
                 close-clicked => { root.close-clicked(); }
             }
 
