@@ -4,6 +4,7 @@ pub enum Step {
     InstallPath,
     Installing,
     Complete,
+    Error,
 }
 
 impl Step {
@@ -13,6 +14,7 @@ impl Step {
             Self::InstallPath => 1,
             Self::Installing => 2,
             Self::Complete => 3,
+            Self::Error => 4,
         }
     }
 
@@ -21,6 +23,7 @@ impl Step {
             1 => Self::InstallPath,
             2 => Self::Installing,
             3 => Self::Complete,
+            4 => Self::Error,
             _ => Self::Welcome,
         }
     }
@@ -31,6 +34,7 @@ impl Step {
             Self::InstallPath => Self::Installing,
             Self::Installing => Self::Complete,
             Self::Complete => Self::Complete,
+            Self::Error => Self::InstallPath,
         }
     }
 }

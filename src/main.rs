@@ -36,6 +36,8 @@ fn main() -> anyhow::Result<()> {
     app.set_current_step(state::Step::Welcome.index());
     app.set_progress_percent(0);
     app.set_progress_message("설치 준비 중...".into());
+    app.set_error_code("".into());
+    app.set_error_message("".into());
 
     app.on_continue_clicked({
         let app = app.as_weak();
@@ -59,9 +61,9 @@ fn main() -> anyhow::Result<()> {
                                 return;
                             }
                             Err(error) => {
-                                app.set_progress_message(
-                                    format!("ADMIN_REQUIRED: {}", error).into(),
-                                );
+                                app.set_error_code("ADMIN_REQUIRED".into());
+                                app.set_error_message(error.to_string().into());
+                                app.set_current_step(state::Step::Error.index());
                                 return;
                             }
                         }
@@ -70,6 +72,8 @@ fn main() -> anyhow::Result<()> {
                     app.set_current_step(state::Step::Installing.index());
                     app.set_progress_percent(0);
                     app.set_progress_message("설치 준비 중...".into());
+                    app.set_error_code("".into());
+                    app.set_error_message("".into());
                     start_install(
                         app.as_weak(),
                         Arc::clone(&manifest),
@@ -80,7 +84,11 @@ fn main() -> anyhow::Result<()> {
                     return;
                 }
 
-                app.set_current_step(current.next().index());
+                if matches!(current, state::Step::Error) {
+                    app.set_current_step(state::Step::InstallPath.index());
+                } else {
+                    app.set_current_step(current.next().index());
+                }
             }
         }
     });
@@ -150,7 +158,9 @@ fn dispatch_install_event(app: slint::Weak<InstallerWindow>, event: progress::In
                     app.set_current_step(state::Step::Complete.index());
                 }
                 progress::InstallEvent::Failed { code, message } => {
-                    app.set_progress_message(format!("{}: {}", code, message).into());
+                    app.set_error_code(code.into());
+                    app.set_error_message(message.into());
+                    app.set_current_step(state::Step::Error.index());
                 }
             }
         }

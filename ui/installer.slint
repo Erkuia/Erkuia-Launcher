@@ -212,6 +212,63 @@ component CompletePage inherits Rectangle {
     }
 }
 
+component ErrorPage inherits Rectangle {
+    in property <string> error-code;
+    in property <string> error-message;
+    callback retry-clicked();
+
+    background: transparent;
+
+    VerticalLayout {
+        padding-left: 90px;
+        padding-right: 90px;
+        alignment: center;
+        spacing: 14px;
+
+        Rectangle {
+            width: 54px;
+            height: 54px;
+            border-radius: 27px;
+            background: #ef4444;
+
+            Text {
+                text: "!";
+                color: #ffffff;
+                font-size: 28px;
+                font-weight: 900;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: "이런, 문제가 생겼어요";
+            color: #111827;
+            font-size: 25px;
+            font-weight: 800;
+        }
+
+        Text {
+            text: error-code;
+            color: #ef4444;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        Text {
+            text: error-message;
+            color: #6b7280;
+            font-size: 12px;
+            wrap: word-wrap;
+        }
+
+        Button {
+            text: "다시 시도";
+            clicked => { root.retry-clicked(); }
+        }
+    }
+}
+
 export component InstallerWindow inherits Window {
     in-out property <string> product-name: "Rendog Launcher";
     in-out property <string> installer-name: "Rendog Launcher Installer";
@@ -221,6 +278,8 @@ export component InstallerWindow inherits Window {
     in-out property <bool> create-desktop-shortcut: true;
     in-out property <int> progress-percent: 0;
     in-out property <string> progress-message: "설치 준비 중...";
+    in-out property <string> error-code: "";
+    in-out property <string> error-message: "";
 
     callback continue-clicked();
 
@@ -303,6 +362,12 @@ export component InstallerWindow inherits Window {
             }
 
             if current-step == 3: CompletePage {
+            }
+
+            if current-step == 4: ErrorPage {
+                error-code: root.error-code;
+                error-message: root.error-message;
+                retry-clicked => { root.continue-clicked(); }
             }
         }
     }
