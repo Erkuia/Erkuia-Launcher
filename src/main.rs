@@ -1,6 +1,7 @@
 use anyhow::Context;
 
 mod download;
+mod install_files;
 mod manifest;
 mod progress;
 mod state;
