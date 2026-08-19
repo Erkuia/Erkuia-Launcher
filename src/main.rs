@@ -15,9 +15,9 @@ fn main() -> anyhow::Result<()> {
     let manifest = Arc::new(manifest::load_manifest().context("failed to load installer manifest")?);
     let app = InstallerWindow::new().context("failed to create installer window")?;
 
-    app.set_product_name(manifest.product.name.into());
-    app.set_installer_name(manifest.installer.name.into());
-    app.set_install_path(manifest.install_plan.default_install_dir.into());
+    app.set_product_name(manifest.product.name.clone().into());
+    app.set_installer_name(manifest.installer.name.clone().into());
+    app.set_install_path(manifest.install_plan.default_install_dir.clone().into());
     app.set_run_after_install(manifest.installer.default_run_after_install);
     app.set_create_desktop_shortcut(manifest.installer.default_create_desktop_shortcut);
     app.set_current_step(state::Step::Welcome.index());

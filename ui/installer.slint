@@ -1,101 +1,5 @@
 import { Button, CheckBox, LineEdit } from "std-widgets.slint";
 
-export component InstallerWindow inherits Window {
-    in-out property <string> product-name: "Rendog Launcher";
-    in-out property <string> installer-name: "Rendog Launcher Installer";
-    in-out property <string> install-path: "";
-    in-out property <int> current-step: 0;
-    in-out property <bool> run-after-install: true;
-    in-out property <bool> create-desktop-shortcut: true;
-    in-out property <int> progress-percent: 0;
-    in-out property <string> progress-message: "설치 준비 중...";
-
-    callback continue-clicked();
-
-    title: installer-name;
-    width: 900px;
-    height: 560px;
-    background: #f8f9fb;
-
-    HorizontalLayout {
-        spacing: 0px;
-
-        Rectangle {
-            width: 220px;
-            background: #eef7f6;
-
-            VerticalLayout {
-                padding: 28px;
-                spacing: 28px;
-
-                HorizontalLayout {
-                    spacing: 10px;
-                    Image {
-                        width: 32px;
-                        height: 32px;
-                        source: @image-url("../assets/rendog-logo-32.png");
-                    }
-                    VerticalLayout {
-                        spacing: 0px;
-                        Text {
-                            text: "RENDOG";
-                            font-size: 13px;
-                            font-weight: 800;
-                            color: #111827;
-                        }
-                        Text {
-                            text: "LAUNCHER";
-                            font-size: 9px;
-                            color: #6b7280;
-                        }
-                    }
-                }
-
-                VerticalLayout {
-                    spacing: 16px;
-                    StepRow { label: "시작"; number: 1; active: current-step >= 0; done: current-step > 0; }
-                    StepRow { label: "설치 경로"; number: 2; active: current-step >= 1; done: current-step > 1; }
-                    StepRow { label: "설치"; number: 3; active: current-step >= 2; done: current-step > 2; }
-                    StepRow { label: "완료"; number: 4; active: current-step >= 3; done: false; }
-                }
-
-                VerticalLayout {
-                    alignment: end;
-                    Text {
-                        text: "v1.0.0";
-                        font-size: 10px;
-                        color: #9ca3af;
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            background: #fbfbfc;
-
-            if current-step == 0: WelcomePage {
-                product-name: root.product-name;
-                continue-clicked => { root.continue-clicked(); }
-            }
-
-            if current-step == 1: PathPage {
-                install-path <=> root.install-path;
-                continue-clicked => { root.continue-clicked(); }
-            }
-
-            if current-step == 2: InstallingPage {
-                percent: root.progress-percent;
-                message: root.progress-message;
-            }
-
-            if current-step == 3: CompletePage {
-                run-after-install <=> root.run-after-install;
-                create-desktop-shortcut <=> root.create-desktop-shortcut;
-            }
-        }
-    }
-}
-
 component StepRow inherits Rectangle {
     in property <string> label;
     in property <int> number;
@@ -303,3 +207,100 @@ component CompletePage inherits Rectangle {
         }
     }
 }
+
+export component InstallerWindow inherits Window {
+    in-out property <string> product-name: "Rendog Launcher";
+    in-out property <string> installer-name: "Rendog Launcher Installer";
+    in-out property <string> install-path: "";
+    in-out property <int> current-step: 0;
+    in-out property <bool> run-after-install: true;
+    in-out property <bool> create-desktop-shortcut: true;
+    in-out property <int> progress-percent: 0;
+    in-out property <string> progress-message: "설치 준비 중...";
+
+    callback continue-clicked();
+
+    title: installer-name;
+    width: 900px;
+    height: 560px;
+    background: #f8f9fb;
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        Rectangle {
+            width: 220px;
+            background: #eef7f6;
+
+            VerticalLayout {
+                padding: 28px;
+                spacing: 28px;
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    Image {
+                        width: 32px;
+                        height: 32px;
+                        source: @image-url("../assets/rendog-logo-32.png");
+                    }
+                    VerticalLayout {
+                        spacing: 0px;
+                        Text {
+                            text: "RENDOG";
+                            font-size: 13px;
+                            font-weight: 800;
+                            color: #111827;
+                        }
+                        Text {
+                            text: "LAUNCHER";
+                            font-size: 9px;
+                            color: #6b7280;
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 16px;
+                    StepRow { label: "시작"; number: 1; active: current-step >= 0; done: current-step > 0; }
+                    StepRow { label: "설치 경로"; number: 2; active: current-step >= 1; done: current-step > 1; }
+                    StepRow { label: "설치"; number: 3; active: current-step >= 2; done: current-step > 2; }
+                    StepRow { label: "완료"; number: 4; active: current-step >= 3; done: false; }
+                }
+
+                VerticalLayout {
+                    alignment: end;
+                    Text {
+                        text: "v1.0.0";
+                        font-size: 10px;
+                        color: #9ca3af;
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            background: #fbfbfc;
+
+            if current-step == 0: WelcomePage {
+                product-name: root.product-name;
+                continue-clicked => { root.continue-clicked(); }
+            }
+
+            if current-step == 1: PathPage {
+                install-path <=> root.install-path;
+                continue-clicked => { root.continue-clicked(); }
+            }
+
+            if current-step == 2: InstallingPage {
+                percent: root.progress-percent;
+                message: root.progress-message;
+            }
+
+            if current-step == 3: CompletePage {
+                run-after-install <=> root.run-after-install;
+                create-desktop-shortcut <=> root.create-desktop-shortcut;
+            }
+        }
+    }
+}
+
