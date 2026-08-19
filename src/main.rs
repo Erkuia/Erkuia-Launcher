@@ -28,6 +28,8 @@ struct TitleDragState {
 }
 
 fn main() -> anyhow::Result<()> {
+    std::env::set_var("SLINT_STYLE", "fluent-light");
+
     let manifest =
         Arc::new(manifest::load_manifest().context("failed to load installer manifest")?);
 
