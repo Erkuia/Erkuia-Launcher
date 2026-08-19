@@ -93,6 +93,16 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
+    app.on_close_clicked({
+        let app = app.as_weak();
+        move || {
+            if let Some(app) = app.upgrade() {
+                let _ = app.hide();
+            }
+            slint::quit_event_loop().ok();
+        }
+    });
+
     app.run().context("installer window failed")?;
     Ok(())
 }

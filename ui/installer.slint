@@ -173,6 +173,8 @@ component InstallingPage inherits Rectangle {
 }
 
 component CompletePage inherits Rectangle {
+    callback close-clicked();
+
     background: transparent;
 
     VerticalLayout {
@@ -208,6 +210,7 @@ component CompletePage inherits Rectangle {
         }
         Button {
             text: "닫기";
+            clicked => { root.close-clicked(); }
         }
     }
 }
@@ -216,6 +219,7 @@ component ErrorPage inherits Rectangle {
     in property <string> error-code;
     in property <string> error-message;
     callback retry-clicked();
+    callback close-clicked();
 
     background: transparent;
 
@@ -262,9 +266,18 @@ component ErrorPage inherits Rectangle {
             wrap: word-wrap;
         }
 
-        Button {
-            text: "다시 시도";
-            clicked => { root.retry-clicked(); }
+        HorizontalLayout {
+            spacing: 8px;
+
+            Button {
+                text: "다시 시도";
+                clicked => { root.retry-clicked(); }
+            }
+
+            Button {
+                text: "닫기";
+                clicked => { root.close-clicked(); }
+            }
         }
     }
 }
@@ -282,6 +295,7 @@ export component InstallerWindow inherits Window {
     in-out property <string> error-message: "";
 
     callback continue-clicked();
+    callback close-clicked();
 
     title: installer-name;
     width: 900px;
@@ -362,12 +376,14 @@ export component InstallerWindow inherits Window {
             }
 
             if current-step == 3: CompletePage {
+                close-clicked => { root.close-clicked(); }
             }
 
             if current-step == 4: ErrorPage {
                 error-code: root.error-code;
                 error-message: root.error-message;
                 retry-clicked => { root.continue-clicked(); }
+                close-clicked => { root.close-clicked(); }
             }
         }
     }
