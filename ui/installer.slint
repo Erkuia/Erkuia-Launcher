@@ -1,0 +1,301 @@
+import { Button, CheckBox, LineEdit } from "std-widgets.slint";
+
+export component InstallerWindow inherits Window {
+    in-out property <string> product-name: "Rendog Launcher";
+    in-out property <string> installer-name: "Rendog Launcher Installer";
+    in-out property <string> install-path: "";
+    in-out property <int> current-step: 0;
+    in-out property <bool> run-after-install: true;
+    in-out property <bool> create-desktop-shortcut: true;
+
+    callback continue-clicked();
+
+    title: installer-name;
+    width: 900px;
+    height: 560px;
+    background: #f8f9fb;
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        Rectangle {
+            width: 220px;
+            background: #eef7f6;
+
+            VerticalLayout {
+                padding: 28px;
+                spacing: 28px;
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    Image {
+                        width: 32px;
+                        height: 32px;
+                        source: @image-url("../assets/rendog-logo-32.png");
+                    }
+                    VerticalLayout {
+                        spacing: 0px;
+                        Text {
+                            text: "RENDOG";
+                            font-size: 13px;
+                            font-weight: 800;
+                            color: #111827;
+                        }
+                        Text {
+                            text: "LAUNCHER";
+                            font-size: 9px;
+                            color: #6b7280;
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 16px;
+                    StepRow { label: "시작"; number: 1; active: current-step >= 0; done: current-step > 0; }
+                    StepRow { label: "설치 경로"; number: 2; active: current-step >= 1; done: current-step > 1; }
+                    StepRow { label: "설치"; number: 3; active: current-step >= 2; done: current-step > 2; }
+                    StepRow { label: "완료"; number: 4; active: current-step >= 3; done: false; }
+                }
+
+                VerticalLayout {
+                    alignment: end;
+                    Text {
+                        text: "v1.0.0";
+                        font-size: 10px;
+                        color: #9ca3af;
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            background: #fbfbfc;
+
+            if current-step == 0: WelcomePage {
+                product-name: root.product-name;
+                continue-clicked => { root.continue-clicked(); }
+            }
+
+            if current-step == 1: PathPage {
+                install-path <=> root.install-path;
+                continue-clicked => { root.continue-clicked(); }
+            }
+
+            if current-step == 2: InstallingPage {
+                percent: 0;
+            }
+
+            if current-step == 3: CompletePage {
+                run-after-install <=> root.run-after-install;
+                create-desktop-shortcut <=> root.create-desktop-shortcut;
+            }
+        }
+    }
+}
+
+component StepRow inherits Rectangle {
+    in property <string> label;
+    in property <int> number;
+    in property <bool> active;
+    in property <bool> done;
+
+    height: 24px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+
+        Rectangle {
+            width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            background: active ? #0b73f6 : #ffffff;
+            border-width: active ? 0px : 1px;
+            border-color: #cfd8dc;
+
+            Text {
+                text: done ? "✓" : number;
+                color: active ? #ffffff : #6b7280;
+                font-size: 10px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: label;
+            color: active ? #111827 : #9ca3af;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component WelcomePage inherits Rectangle {
+    in property <string> product-name;
+    callback continue-clicked();
+
+    background: transparent;
+
+    VerticalLayout {
+        padding-left: 90px;
+        padding-right: 90px;
+        alignment: center;
+        spacing: 18px;
+
+        Image {
+            width: 64px;
+            height: 64px;
+            source: @image-url("../assets/rendog-logo-72.png");
+        }
+        Text {
+            text: "반가워요! " + product-name + "를\n설치해 볼게요";
+            color: #111827;
+            font-size: 25px;
+            font-weight: 800;
+        }
+        Text {
+            text: "전용 서버 클라이언트에 필요한 파일을 준비해요.";
+            color: #6b7280;
+            font-size: 12px;
+        }
+        Button {
+            text: "시작";
+            clicked => { root.continue-clicked(); }
+        }
+    }
+}
+
+component PathPage inherits Rectangle {
+    in-out property <string> install-path;
+    callback continue-clicked();
+
+    background: transparent;
+
+    VerticalLayout {
+        padding-left: 70px;
+        padding-right: 70px;
+        alignment: center;
+        spacing: 14px;
+
+        Text {
+            text: "어디에 설치할까요?";
+            color: #111827;
+            font-size: 22px;
+            font-weight: 800;
+        }
+        Text {
+            text: "기본 위치가 선택되어 있어요. 바꾸고 싶다면 경로를 수정해 주세요.";
+            color: #6b7280;
+            font-size: 12px;
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            LineEdit {
+                text <=> root.install-path;
+            }
+            Button {
+                text: "찾아보기";
+            }
+        }
+        Button {
+            text: "설치";
+            clicked => { root.continue-clicked(); }
+        }
+    }
+}
+
+component InstallingPage inherits Rectangle {
+    in property <int> percent;
+
+    background: transparent;
+
+    VerticalLayout {
+        padding-left: 70px;
+        padding-right: 70px;
+        alignment: center;
+        spacing: 14px;
+
+        Text {
+            text: "설치하는 중이에요";
+            color: #111827;
+            font-size: 22px;
+            font-weight: 800;
+        }
+        Text {
+            text: "곧 끝나요. 잠시만 기다려 주세요.";
+            color: #6b7280;
+            font-size: 12px;
+        }
+        Text {
+            text: percent + "%";
+            color: #111827;
+            font-size: 38px;
+            font-weight: 900;
+        }
+        Rectangle {
+            height: 6px;
+            background: #dfe3e8;
+            border-radius: 3px;
+            Rectangle {
+                width: parent.width * percent / 100;
+                height: 6px;
+                background: #0b73f6;
+                border-radius: 3px;
+            }
+        }
+        Text {
+            text: "설치 준비 중...";
+            color: #6b7280;
+            font-size: 12px;
+        }
+    }
+}
+
+component CompletePage inherits Rectangle {
+    in-out property <bool> run-after-install;
+    in-out property <bool> create-desktop-shortcut;
+
+    background: transparent;
+
+    VerticalLayout {
+        padding-left: 90px;
+        padding-right: 90px;
+        alignment: center;
+        spacing: 14px;
+
+        Rectangle {
+            width: 54px;
+            height: 54px;
+            border-radius: 27px;
+            background: #0b73f6;
+            Text {
+                text: "✓";
+                color: #ffffff;
+                font-size: 24px;
+                font-weight: 800;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        Text {
+            text: "다 됐어요!";
+            color: #111827;
+            font-size: 25px;
+            font-weight: 800;
+        }
+        CheckBox {
+            text: "바탕화면 바로가기 만들기";
+            checked <=> root.create-desktop-shortcut;
+        }
+        CheckBox {
+            text: "설치 후 Rendog Launcher 실행";
+            checked <=> root.run-after-install;
+        }
+        Button {
+            text: "닫기";
+        }
+    }
+}
