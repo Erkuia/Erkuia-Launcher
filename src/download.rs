@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::{Read, Write},
-    path::{Path, PathBuf},
+    path::{Component as PathComponent, Path, PathBuf},
 };
 
 use anyhow::{bail, Context};
@@ -44,7 +44,7 @@ pub fn download_ready_components(
             message: format!("{} 다운로드 중...", component.name),
         });
 
-        let file_path = cache_dir.join(&component.file_name);
+        let file_path = cache_file_path(cache_dir, &component.file_name)?;
         let bytes = download_component(component, &file_path, downloaded_before, total_size, emit)
             .with_context(|| format!("failed to download {}", component.id))?;
 
@@ -167,6 +167,23 @@ fn percent(done: u64, total: u64) -> f32 {
     }
 
     (done as f32 / total as f32 * 100.0).clamp(0.0, 100.0)
+}
+
+fn cache_file_path(cache_dir: &Path, file_name: &str) -> anyhow::Result<PathBuf> {
+    let path = Path::new(file_name);
+
+    if path.is_absolute() {
+        bail!("component file name must be relative");
+    }
+
+    if path
+        .components()
+        .any(|part| !matches!(part, PathComponent::Normal(_)))
+    {
+        bail!("component file name must not contain path separators");
+    }
+
+    Ok(cache_dir.join(path))
 }
 
 #[derive(Debug)]

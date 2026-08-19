@@ -1,11 +1,11 @@
-use std::{
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context};
 
-use crate::progress::{InstallEvent, InstallStage};
+use crate::{
+    powershell,
+    progress::{InstallEvent, InstallStage},
+};
 
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
@@ -68,11 +68,9 @@ pub fn create_launcher_shortcuts(
 fn known_folder_path(shell_folder_name: &str) -> anyhow::Result<PathBuf> {
     let script = format!(
         "$w = New-Object -ComObject WScript.Shell; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Write-Output $w.SpecialFolders('{}')",
-        escape_powershell_single_quoted(shell_folder_name)
+        powershell::escape_single_quoted(shell_folder_name)
     );
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-        .output()
+    let output = powershell::output(&["-NoProfile", "-NonInteractive", "-Command", &script])
         .context("failed to query Windows shell folder")?;
 
     if !output.status.success() {
@@ -94,13 +92,11 @@ fn create_shortcut(
 ) -> anyhow::Result<()> {
     let script = format!(
         "$w = New-Object -ComObject WScript.Shell; $s = $w.CreateShortcut('{}'); $s.TargetPath = '{}'; $s.WorkingDirectory = '{}'; $s.Save()",
-        escape_powershell_single_quoted(&shortcut_path.display().to_string()),
-        escape_powershell_single_quoted(&target_path.display().to_string()),
-        escape_powershell_single_quoted(&working_dir.display().to_string())
+        powershell::escape_single_quoted(&shortcut_path.display().to_string()),
+        powershell::escape_single_quoted(&target_path.display().to_string()),
+        powershell::escape_single_quoted(&working_dir.display().to_string())
     );
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-        .output()
+    let output = powershell::output(&["-NoProfile", "-NonInteractive", "-Command", &script])
         .context("failed to run shortcut creation script")?;
 
     if !output.status.success() {
@@ -108,8 +104,4 @@ fn create_shortcut(
     }
 
     Ok(())
-}
-
-fn escape_powershell_single_quoted(value: &str) -> String {
-    value.replace('\'', "''")
 }

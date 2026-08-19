@@ -1,12 +1,10 @@
-use std::{
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context};
 
 use crate::{
     manifest::Manifest,
+    powershell,
     progress::{InstallEvent, InstallStage},
 };
 
@@ -41,19 +39,19 @@ pub fn register_uninstaller(
          New-ItemProperty -Path '{}' -Name InstallLocation -Value '{}' -PropertyType String -Force | Out-Null; \
          New-ItemProperty -Path '{}' -Name UninstallString -Value '{}' -PropertyType String -Force | Out-Null; \
          New-ItemProperty -Path '{}' -Name DisplayIcon -Value '{}' -PropertyType String -Force | Out-Null",
-        escape_powershell_single_quoted(UNINSTALL_KEY),
-        escape_powershell_single_quoted(UNINSTALL_KEY),
-        escape_powershell_single_quoted(&manifest.uninstall.display_name),
-        escape_powershell_single_quoted(UNINSTALL_KEY),
+        powershell::escape_single_quoted(UNINSTALL_KEY),
+        powershell::escape_single_quoted(UNINSTALL_KEY),
+        powershell::escape_single_quoted(&manifest.uninstall.display_name),
+        powershell::escape_single_quoted(UNINSTALL_KEY),
         env!("CARGO_PKG_VERSION"),
-        escape_powershell_single_quoted(UNINSTALL_KEY),
+        powershell::escape_single_quoted(UNINSTALL_KEY),
         "Rendog",
-        escape_powershell_single_quoted(UNINSTALL_KEY),
-        escape_powershell_single_quoted(&install_dir.display().to_string()),
-        escape_powershell_single_quoted(UNINSTALL_KEY),
-        escape_powershell_single_quoted(&uninstall_command),
-        escape_powershell_single_quoted(UNINSTALL_KEY),
-        escape_powershell_single_quoted(&installer_path.display().to_string())
+        powershell::escape_single_quoted(UNINSTALL_KEY),
+        powershell::escape_single_quoted(&install_dir.display().to_string()),
+        powershell::escape_single_quoted(UNINSTALL_KEY),
+        powershell::escape_single_quoted(&uninstall_command),
+        powershell::escape_single_quoted(UNINSTALL_KEY),
+        powershell::escape_single_quoted(&installer_path.display().to_string())
     );
 
     run_powershell(&script).context("failed to write uninstall registry entry")?;
@@ -88,7 +86,7 @@ fn run_uninstall(manifest: &Manifest, install_dir: &Path) -> anyhow::Result<()> 
 
     run_powershell(&format!(
         "Remove-Item -Path '{}' -Recurse -Force -ErrorAction SilentlyContinue",
-        escape_powershell_single_quoted(UNINSTALL_KEY)
+        powershell::escape_single_quoted(UNINSTALL_KEY)
     ))
     .context("failed to remove uninstall registry entry")?;
 
@@ -149,13 +147,10 @@ fn schedule_install_dir_removal(install_dir: &Path) -> anyhow::Result<()> {
 
     let script = format!(
         "Start-Sleep -Seconds 1; Remove-Item -LiteralPath '{}' -Recurse -Force -ErrorAction SilentlyContinue",
-        escape_powershell_single_quoted(&install_dir.display().to_string())
+        powershell::escape_single_quoted(&install_dir.display().to_string())
     );
 
-    Command::new("powershell")
-        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &script])
-        .spawn()
-        .context("failed to schedule install directory removal")?;
+    powershell::spawn_hidden(&script).context("failed to schedule install directory removal")?;
 
     Ok(())
 }
@@ -213,18 +208,11 @@ fn default_install_dir_from_manifest(manifest: &Manifest) -> anyhow::Result<Path
 }
 
 fn run_powershell(script: &str) -> anyhow::Result<()> {
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", script])
-        .output()
-        .context("failed to run PowerShell")?;
+    let output = powershell::output(&["-NoProfile", "-NonInteractive", "-Command", script])?;
 
     if !output.status.success() {
         bail!("PowerShell command failed");
     }
 
     Ok(())
-}
-
-fn escape_powershell_single_quoted(value: &str) -> String {
-    value.replace('\'', "''")
 }

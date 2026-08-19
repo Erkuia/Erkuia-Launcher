@@ -1,6 +1,6 @@
-use std::process::Command;
-
 use anyhow::{bail, Context};
+
+use crate::powershell;
 
 pub fn is_install_mode() -> bool {
     std::env::args().any(|arg| arg == "--install")
@@ -27,14 +27,12 @@ pub fn run_after_install_from_args() -> Option<bool> {
 }
 
 pub fn is_running_as_admin() -> anyhow::Result<bool> {
-    let output = Command::new("powershell")
-        .args([
+    let output = powershell::output(&[
             "-NoProfile",
             "-NonInteractive",
             "-Command",
             "([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)",
         ])
-        .output()
         .context("failed to check administrator status")?;
 
     if !output.status.success() {
@@ -52,18 +50,16 @@ pub fn restart_as_admin_for_install(
     let exe = std::env::current_exe().context("failed to resolve current executable")?;
     let args = format!(
         "--install --install-dir \"{}\" --desktop-shortcut {} --run-after-install {}",
-        escape_powershell_double_quoted(install_dir),
+        powershell::escape_double_quoted(install_dir),
         create_desktop_shortcut,
         run_after_install
     );
     let script = format!(
         "Start-Process -FilePath \"{}\" -ArgumentList '{}' -Verb RunAs -WindowStyle Hidden",
-        escape_powershell_double_quoted(&exe.display().to_string()),
-        escape_powershell_single_quoted(&args)
+        powershell::escape_double_quoted(&exe.display().to_string()),
+        powershell::escape_single_quoted(&args)
     );
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-        .output()
+    let output = powershell::output(&["-NoProfile", "-NonInteractive", "-Command", &script])
         .context("failed to request administrator permission")?;
 
     if !output.status.success() {
@@ -83,12 +79,4 @@ fn value_after_arg(name: &str) -> Option<String> {
     }
 
     None
-}
-
-fn escape_powershell_single_quoted(value: &str) -> String {
-    value.replace('\'', "''")
-}
-
-fn escape_powershell_double_quoted(value: &str) -> String {
-    value.replace('`', "``").replace('"', "`\"")
 }

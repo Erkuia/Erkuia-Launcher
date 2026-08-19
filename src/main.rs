@@ -8,6 +8,7 @@ mod elevation;
 mod install;
 mod install_files;
 mod manifest;
+mod powershell;
 mod progress;
 mod shortcuts;
 mod state;
@@ -62,6 +63,7 @@ fn main() -> anyhow::Result<()> {
                         ) {
                             Ok(()) => {
                                 let _ = app.hide();
+                                slint::quit_event_loop().ok();
                                 return;
                             }
                             Err(error) => {
