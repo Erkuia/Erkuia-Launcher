@@ -28,6 +28,29 @@ pub struct Installer {
 pub struct InstallPlan {
     #[serde(rename = "defaultInstallDir")]
     pub default_install_dir: String,
+    pub components: Vec<Component>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Component {
+    pub id: String,
+    pub name: String,
+    pub required: bool,
+    pub status: ComponentStatus,
+    pub url: Option<String>,
+    #[serde(rename = "fileName")]
+    pub file_name: String,
+    #[serde(rename = "targetPath")]
+    pub target_path: String,
+    pub size: Option<u64>,
+    pub sha256: Option<String>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ComponentStatus {
+    Ready,
+    Pending,
 }
 
 pub fn load_manifest() -> anyhow::Result<Manifest> {
