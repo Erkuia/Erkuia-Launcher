@@ -521,6 +521,12 @@ export component InstallerWindow inherits Window {
                 width: 220px;
                 background: #eef7f6;
 
+                Rectangle {
+                    x: parent.width - 1px;
+                    width: 1px;
+                    background: #dbe7e5;
+                }
+
                 VerticalLayout {
                     padding: 28px;
                     spacing: 28px;
@@ -601,5 +607,16 @@ export component InstallerWindow inherits Window {
                 }
             }
         }
+
+    }
+
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: parent.height;
+        background: transparent;
+        border-width: 1px;
+        border-color: #d8dee8;
     }
 }
