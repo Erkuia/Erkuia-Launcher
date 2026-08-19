@@ -1,4 +1,4 @@
-import { Button, CheckBox, LineEdit } from "std-widgets.slint";
+import { CheckBox, LineEdit } from "std-widgets.slint";
 
 component StepRow inherits Rectangle {
     in property <string> label;
@@ -106,6 +106,63 @@ component TextButton inherits Rectangle {
 
     touch-area := TouchArea {
         clicked => { root.clicked(); }
+    }
+}
+
+component WindowCloseButton inherits Rectangle {
+    callback clicked();
+
+    width: 44px;
+    height: 32px;
+    background: touch-area.pressed ? #dc2626 : (touch-area.has-hover ? #ef4444 : transparent);
+
+    Text {
+        text: "×";
+        color: touch-area.has-hover ? #ffffff : #4b5563;
+        font-size: 17px;
+        font-weight: 500;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component TitleBar inherits Rectangle {
+    in property <string> title;
+    callback close-clicked();
+
+    height: 32px;
+    background: #fbfbfc;
+    border-width: 0px;
+
+    HorizontalLayout {
+        spacing: 0px;
+        padding-left: 12px;
+
+        Text {
+            text: root.title;
+            color: #374151;
+            font-size: 11px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+
+        Rectangle {
+            background: transparent;
+        }
+
+        WindowCloseButton {
+            clicked => { root.close-clicked(); }
+        }
+    }
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: #e5e7eb;
     }
 }
 
@@ -384,94 +441,104 @@ export component InstallerWindow inherits Window {
     callback browse-clicked();
 
     title: installer-name;
+    no-frame: true;
     width: 900px;
     height: 560px;
     background: #f8f9fb;
 
-    HorizontalLayout {
+    VerticalLayout {
         spacing: 0px;
 
-        Rectangle {
-            width: 220px;
-            background: #eef7f6;
-
-            VerticalLayout {
-                padding: 28px;
-                spacing: 28px;
-
-                HorizontalLayout {
-                    spacing: 10px;
-                    Image {
-                        width: 32px;
-                        height: 32px;
-                        source: @image-url("../assets/rendog-logo-32.png");
-                    }
-                    VerticalLayout {
-                        spacing: 0px;
-                        Text {
-                            text: "RENDOG";
-                            font-size: 13px;
-                            font-weight: 800;
-                            color: #111827;
-                        }
-                        Text {
-                            text: "LAUNCHER";
-                            font-size: 9px;
-                            color: #6b7280;
-                        }
-                    }
-                }
-
-                VerticalLayout {
-                    spacing: 16px;
-                    StepRow { label: "시작"; number: 1; active: current-step >= 0; done: current-step > 0; }
-                    StepRow { label: "설치 경로"; number: 2; active: current-step >= 1; done: current-step > 1; }
-                    StepRow { label: "설치"; number: 3; active: current-step >= 2; done: current-step > 2; }
-                    StepRow { label: "완료"; number: 4; active: current-step >= 3; done: false; }
-                }
-
-                VerticalLayout {
-                    alignment: end;
-                    Text {
-                        text: "v1.0.0";
-                        font-size: 10px;
-                        color: #9ca3af;
-                    }
-                }
-            }
+        TitleBar {
+            title: root.installer-name;
+            close-clicked => { root.close-clicked(); }
         }
 
-        Rectangle {
-            background: #fbfbfc;
+        HorizontalLayout {
+            spacing: 0px;
 
-            if current-step == 0: WelcomePage {
-                product-name: root.product-name;
-                continue-clicked => { root.continue-clicked(); }
+            Rectangle {
+                width: 220px;
+                background: #eef7f6;
+
+                VerticalLayout {
+                    padding: 28px;
+                    spacing: 28px;
+
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Image {
+                            width: 32px;
+                            height: 32px;
+                            source: @image-url("../assets/rendog-logo-32.png");
+                        }
+                        VerticalLayout {
+                            spacing: 0px;
+                            Text {
+                                text: "RENDOG";
+                                font-size: 13px;
+                                font-weight: 800;
+                                color: #111827;
+                            }
+                            Text {
+                                text: "LAUNCHER";
+                                font-size: 9px;
+                                color: #6b7280;
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 16px;
+                        StepRow { label: "시작"; number: 1; active: current-step >= 0; done: current-step > 0; }
+                        StepRow { label: "설치 경로"; number: 2; active: current-step >= 1; done: current-step > 1; }
+                        StepRow { label: "설치"; number: 3; active: current-step >= 2; done: current-step > 2; }
+                        StepRow { label: "완료"; number: 4; active: current-step >= 3; done: false; }
+                    }
+
+                    VerticalLayout {
+                        alignment: end;
+                        Text {
+                            text: "v1.0.0";
+                            font-size: 10px;
+                            color: #9ca3af;
+                        }
+                    }
+                }
             }
 
-            if current-step == 1: PathPage {
-                install-path <=> root.install-path;
-                run-after-install <=> root.run-after-install;
-                create-desktop-shortcut <=> root.create-desktop-shortcut;
-                continue-clicked => { root.continue-clicked(); }
-                browse-clicked => { root.browse-clicked(); }
-            }
+            Rectangle {
+                background: #fbfbfc;
 
-            if current-step == 2: InstallingPage {
-                percent: root.progress-percent;
-                message: root.progress-message;
-            }
+                if current-step == 0: WelcomePage {
+                    product-name: root.product-name;
+                    continue-clicked => { root.continue-clicked(); }
+                }
 
-            if current-step == 3: CompletePage {
-                run-after-install <=> root.run-after-install;
-                close-clicked => { root.close-clicked(); }
-            }
+                if current-step == 1: PathPage {
+                    install-path <=> root.install-path;
+                    run-after-install <=> root.run-after-install;
+                    create-desktop-shortcut <=> root.create-desktop-shortcut;
+                    continue-clicked => { root.continue-clicked(); }
+                    browse-clicked => { root.browse-clicked(); }
+                }
 
-            if current-step == 4: ErrorPage {
-                error-code: root.error-code;
-                error-message: root.error-message;
-                retry-clicked => { root.continue-clicked(); }
-                close-clicked => { root.close-clicked(); }
+                if current-step == 2: InstallingPage {
+                    percent: root.progress-percent;
+                    message: root.progress-message;
+                }
+
+                if current-step == 3: CompletePage {
+                    run-after-install <=> root.run-after-install;
+                    close-clicked => { root.close-clicked(); }
+                }
+
+                if current-step == 4: ErrorPage {
+                    error-code: root.error-code;
+                    error-message: root.error-message;
+                    retry-clicked => { root.continue-clicked(); }
+                    close-clicked => { root.close-clicked(); }
+                }
             }
         }
     }
