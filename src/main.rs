@@ -10,6 +10,7 @@ mod progress;
 mod shortcuts;
 mod state;
 mod uninstall;
+mod elevation;
 
 slint::include_modules!();
 
@@ -18,6 +19,10 @@ fn main() -> anyhow::Result<()> {
 
     if uninstall::is_uninstall_mode() {
         return uninstall::run_uninstall_from_args(&manifest);
+    }
+
+    if elevation::is_install_mode() {
+        return run_headless_install(&manifest);
     }
 
     let app = InstallerWindow::new().context("failed to create installer window")?;
@@ -39,6 +44,27 @@ fn main() -> anyhow::Result<()> {
                 let current = state::Step::from_index(app.get_current_step());
 
                 if matches!(current, state::Step::InstallPath) {
+                    if manifest.installer.requires_admin_on_install
+                        && !elevation::is_running_as_admin().unwrap_or(false)
+                    {
+                        app.set_progress_message("관리자 권한 요청 중...".into());
+                        match elevation::restart_as_admin_for_install(
+                            &app.get_install_path(),
+                            app.get_create_desktop_shortcut(),
+                        ) {
+                            Ok(()) => {
+                                let _ = app.hide();
+                                return;
+                            }
+                            Err(error) => {
+                                app.set_progress_message(
+                                    format!("ADMIN_REQUIRED: {}", error).into(),
+                                );
+                                return;
+                            }
+                        }
+                    }
+
                     app.set_current_step(state::Step::Installing.index());
                     app.set_progress_percent(0);
                     app.set_progress_message("설치 준비 중...".into());
@@ -57,6 +83,18 @@ fn main() -> anyhow::Result<()> {
     });
 
     app.run().context("installer window failed")?;
+    Ok(())
+}
+
+fn run_headless_install(manifest: &Arc<manifest::Manifest>) -> anyhow::Result<()> {
+    let options = install::InstallOptions {
+        install_dir: PathBuf::from(
+            elevation::install_dir_from_args().context("missing --install-dir")?,
+        ),
+        create_desktop_shortcut: elevation::desktop_shortcut_from_args().unwrap_or(true),
+    };
+
+    install::run_install(manifest, &options, &mut |_| {})?;
     Ok(())
 }
 

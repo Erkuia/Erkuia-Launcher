@@ -19,6 +19,8 @@ pub struct Product {
 #[derive(Debug, Deserialize)]
 pub struct Installer {
     pub name: String,
+    #[serde(rename = "requiresAdminOnInstall")]
+    pub requires_admin_on_install: bool,
     #[serde(rename = "defaultRunAfterInstall")]
     pub default_run_after_install: bool,
     #[serde(rename = "defaultCreateDesktopShortcut")]
