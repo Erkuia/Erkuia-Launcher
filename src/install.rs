@@ -8,7 +8,7 @@ use anyhow::{bail, Context};
 use crate::{
     download,
     install_files::{self, InstalledComponent},
-    manifest::Manifest,
+    manifest::{ComponentStatus, Manifest},
     progress::{InstallEvent, InstallStage},
     shortcuts, uninstall,
 };
@@ -44,6 +44,8 @@ pub fn run_install(
         local_percent: 0.0,
         message: "설치 준비 중...".to_string(),
     });
+
+    validate_required_components(manifest)?;
 
     std::fs::create_dir_all(&options.install_dir).with_context(|| {
         format!(
@@ -92,6 +94,25 @@ pub fn run_install(
         install_dir: options.install_dir.clone(),
         installed_components,
     })
+}
+
+fn validate_required_components(manifest: &Manifest) -> anyhow::Result<()> {
+    let pending_required: Vec<&str> = manifest
+        .install_plan
+        .components
+        .iter()
+        .filter(|component| component.required && component.status == ComponentStatus::Pending)
+        .map(|component| component.id.as_str())
+        .collect();
+
+    if pending_required.is_empty() || manifest.installer.allow_pending_required_components {
+        return Ok(());
+    }
+
+    bail!(
+        "required install components are pending: {}",
+        pending_required.join(", ")
+    )
 }
 
 fn installer_cache_dir() -> anyhow::Result<PathBuf> {

@@ -11,6 +11,7 @@
     "name": "Rendog Launcher Installer",
     "mode": "online",
     "requiresAdminOnInstall": true,
+    "allowPendingRequiredComponents": true,
     "defaultRunAfterInstall": true,
     "defaultCreateDesktopShortcut": true
   },
