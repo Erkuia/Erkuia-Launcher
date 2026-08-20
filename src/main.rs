@@ -1,17 +1,21 @@
 #![windows_subsystem = "windows"]
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use anyhow::Context;
-use slint::PhysicalPosition;
+use slint::{PhysicalPosition, TimerMode};
 
+mod config;
 mod error;
 mod paths;
 
+use config::Config;
 use error::{ErrorCode, UserError};
 use paths::Paths;
 
 slint::include_modules!();
+
+const SAVE_DEBOUNCE: Duration = Duration::from_millis(400);
 
 #[derive(Clone, Copy)]
 struct TitleDragState {
@@ -33,7 +37,27 @@ fn main() -> anyhow::Result<()> {
     );
 
     let paths: Rc<RefCell<Option<Paths>>> = Rc::new(RefCell::new(None));
-    prepare_paths(&app, &paths);
+    let settings: Rc<RefCell<Config>> = Rc::new(RefCell::new(Config::default()));
+    let save_timer = Rc::new(slint::Timer::default());
+
+    start_up(&app, &paths, &settings);
+
+    let schedule_save = {
+        let timer = Rc::clone(&save_timer);
+        let paths = Rc::clone(&paths);
+        let settings = Rc::clone(&settings);
+        let app_weak = app.as_weak();
+
+        move || {
+            let paths = Rc::clone(&paths);
+            let settings = Rc::clone(&settings);
+            let app_weak = app_weak.clone();
+
+            timer.start(TimerMode::SingleShot, SAVE_DEBOUNCE, move || {
+                save_settings(&paths, &settings, &app_weak);
+            });
+        }
+    };
 
     let title_drag_state = Rc::new(RefCell::new(None::<TitleDragState>));
 
@@ -97,12 +121,30 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
+    app.on_fps_changed({
+        let settings = Rc::clone(&settings);
+        let schedule_save = schedule_save.clone();
+        move |fps| {
+            settings.borrow_mut().target_fps = fps;
+            schedule_save();
+        }
+    });
+
+    app.on_adaptive_changed({
+        let settings = Rc::clone(&settings);
+        move |enabled| {
+            settings.borrow_mut().adaptive_rendering = enabled;
+            schedule_save();
+        }
+    });
+
     app.on_error_retry({
         let app = app.as_weak();
         let paths = Rc::clone(&paths);
+        let settings = Rc::clone(&settings);
         move || {
             if let Some(app) = app.upgrade() {
-                prepare_paths(&app, &paths);
+                start_up(&app, &paths, &settings);
             }
         }
     });
@@ -110,8 +152,17 @@ fn main() -> anyhow::Result<()> {
     app.on_close_clicked({
         let app = app.as_weak();
         let title_drag_state = Rc::clone(&title_drag_state);
+        let paths = Rc::clone(&paths);
+        let settings = Rc::clone(&settings);
+        let save_timer = Rc::clone(&save_timer);
         move || {
             *title_drag_state.borrow_mut() = None;
+
+            // A debounced save may still be pending; write it out now instead of
+            // dropping the user's last change on the way out.
+            save_timer.stop();
+            save_settings(&paths, &settings, &app);
+
             if let Some(app) = app.upgrade() {
                 let _ = app.hide();
             }
@@ -124,16 +175,56 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn prepare_paths(app: &LauncherWindow, slot: &Rc<RefCell<Option<Paths>>>) {
-    match Paths::resolve().and_then(|paths| paths.bootstrap().map(|()| paths)) {
-        Ok(paths) => {
-            app.set_data_directory(paths.data_dir().display().to_string().into());
-            app.set_error_open(false);
-            *slot.borrow_mut() = Some(paths);
-        }
+fn start_up(
+    app: &LauncherWindow,
+    paths: &Rc<RefCell<Option<Paths>>>,
+    settings: &Rc<RefCell<Config>>,
+) {
+    let resolved = match Paths::resolve().and_then(|resolved| resolved.bootstrap().map(|()| resolved))
+    {
+        Ok(resolved) => resolved,
         Err(error) => {
-            *slot.borrow_mut() = None;
+            *paths.borrow_mut() = None;
             show_error(app, ErrorCode::Config, &error);
+            return;
+        }
+    };
+
+    app.set_data_directory(resolved.data_dir().display().to_string().into());
+
+    let loaded = match Config::load(&resolved.config_file()) {
+        Ok(loaded) => {
+            app.set_error_open(false);
+            loaded
+        }
+        // A broken config must not block startup: fall back to defaults, but say
+        // so rather than silently overwriting whatever the user had.
+        Err(error) => {
+            show_error(app, ErrorCode::Config, &error);
+            Config::default()
+        }
+    };
+
+    app.set_target_fps(loaded.target_fps);
+    app.set_adaptive_rendering(loaded.adaptive_rendering);
+
+    *settings.borrow_mut() = loaded;
+    *paths.borrow_mut() = Some(resolved);
+}
+
+fn save_settings(
+    paths: &Rc<RefCell<Option<Paths>>>,
+    settings: &Rc<RefCell<Config>>,
+    app: &slint::Weak<LauncherWindow>,
+) {
+    let Some(path) = paths.borrow().as_ref().map(Paths::config_file) else {
+        return;
+    };
+    let snapshot = settings.borrow().clone();
+
+    if let Err(error) = snapshot.save(&path) {
+        if let Some(app) = app.upgrade() {
+            show_error(&app, ErrorCode::Config, &error);
         }
     }
 }
