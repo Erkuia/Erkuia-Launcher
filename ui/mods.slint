@@ -1,0 +1,164 @@
+import { Theme, Typo } from "theme.slint";
+import { Toggle, Badge, TextButton } from "controls.slint";
+
+export struct ModEntry {
+    id: string,
+    name: string,
+    description: string,
+    enabled: bool,
+}
+
+component DashedFrame inherits Rectangle {
+    in property <color> stroke: Theme.dashed-border;
+    in property <length> corner: Theme.radius-control;
+    in property <length> thickness: 1px;
+
+    property <length> period: Theme.dash-length + Theme.dash-gap;
+    property <length> h-span: root.width - 2 * root.corner;
+    property <length> v-span: root.height - 2 * root.corner;
+    property <int> h-count: Math.max(1, Math.floor(root.h-span / root.period));
+    property <int> v-count: Math.max(1, Math.floor(root.v-span / root.period));
+    property <length> h-step: root.h-span / root.h-count;
+    property <length> v-step: root.v-span / root.v-count;
+
+    background: transparent;
+
+    for i in root.h-count: Rectangle {
+        x: root.corner + i * root.h-step;
+        y: 0px;
+        width: Theme.dash-length;
+        height: root.thickness;
+        background: root.stroke;
+    }
+
+    for i in root.h-count: Rectangle {
+        x: root.corner + i * root.h-step;
+        y: root.height - root.thickness;
+        width: Theme.dash-length;
+        height: root.thickness;
+        background: root.stroke;
+    }
+
+    for i in root.v-count: Rectangle {
+        x: 0px;
+        y: root.corner + i * root.v-step;
+        width: root.thickness;
+        height: Theme.dash-length;
+        background: root.stroke;
+    }
+
+    for i in root.v-count: Rectangle {
+        x: root.width - root.thickness;
+        y: root.corner + i * root.v-step;
+        width: root.thickness;
+        height: Theme.dash-length;
+        background: root.stroke;
+    }
+}
+
+export component AddModButton inherits Rectangle {
+    callback clicked();
+
+    border-radius: Theme.radius-control;
+    background: touch.pressed
+        ? Theme.control
+        : (touch.has-hover ? Theme.field-background : transparent);
+
+    DashedFrame {
+        width: 100%;
+        height: 100%;
+    }
+
+    VerticalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 10px;
+        padding-bottom: 12px;
+
+        Text {
+            text: "+ 로컬에서 모드 추가";
+            color: Theme.label;
+            font-size: Typo.title-bar;
+            font-weight: Typo.semibold;
+            horizontal-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component ModRow inherits HorizontalLayout {
+    in property <string> name;
+    in property <string> description;
+    in property <bool> required;
+    in property <bool> removable;
+    in-out property <bool> enabled;
+    callback toggled(bool);
+    callback removed();
+
+    HorizontalLayout {
+        spacing: 13px;
+        horizontal-stretch: 0;
+
+        VerticalLayout {
+            spacing: 2px;
+            alignment: center;
+
+            HorizontalLayout {
+                spacing: 13px;
+
+                Text {
+                    text: root.name;
+                    color: Theme.title;
+                    font-size: Typo.body;
+                    font-weight: Typo.semibold;
+                }
+
+                if root.removable: TextButton {
+                    text: "삭제";
+                    danger: true;
+                    clicked => {
+                        root.removed();
+                    }
+                }
+            }
+
+            VerticalLayout {
+                padding-bottom: 1px;
+
+                Text {
+                    text: root.description == "" ? "(None)" : root.description;
+                    color: root.description == "" ? Theme.faint : Theme.muted;
+                    font-italic: root.description == "";
+                    font-size: Typo.caption;
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        background: transparent;
+        horizontal-stretch: 1;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 0;
+
+        if root.required: Badge {
+            text: "필수";
+        }
+
+        if !root.required: Toggle {
+            checked <=> root.enabled;
+            toggled(on) => {
+                root.toggled(on);
+            }
+        }
+    }
+}

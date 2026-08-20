@@ -5,6 +5,7 @@ import { ValueSlider } from "slider.slint";
 import { ModalOverlay, Popover } from "overlays.slint";
 import { ProfileChip, ProfileMenu, Account } from "profile.slint";
 import { SettingsPanel } from "settings.slint";
+import { ModEntry } from "mods.slint";
 
 export component LauncherWindow inherits Window {
     in-out property <string> product-name: "Rendog Launcher";
@@ -25,6 +26,7 @@ export component LauncherWindow inherits Window {
 
     in-out property <int> target-fps: 105;
     in-out property <bool> adaptive-rendering: true;
+    in-out property <[ModEntry]> local-mods;
 
     in-out property <bool> busy;
     in-out property <string> status-hint: "시작하려면 먼저 로그인해 주세요";
@@ -41,6 +43,10 @@ export component LauncherWindow inherits Window {
     callback switch-account(string);
     callback open-directory-clicked();
     callback fps-changed(int);
+    callback adaptive-changed(bool);
+    callback add-mod-clicked();
+    callback toggle-mod(string, bool);
+    callback remove-mod(string);
 
     title: root.product-name;
     no-frame: true;
@@ -267,8 +273,22 @@ export component LauncherWindow inherits Window {
                         SettingsPanel {
                             program-directory: root.program-directory;
                             target-fps <=> root.target-fps;
+                            adaptive-rendering <=> root.adaptive-rendering;
+                            local-mods: root.local-mods;
                             fps-changed(fps) => {
                                 root.fps-changed(fps);
+                            }
+                            adaptive-changed(on) => {
+                                root.adaptive-changed(on);
+                            }
+                            add-mod => {
+                                root.add-mod-clicked();
+                            }
+                            toggle-mod(id, on) => {
+                                root.toggle-mod(id, on);
+                            }
+                            remove-mod(id) => {
+                                root.remove-mod(id);
                             }
                             close => {
                                 root.settings-open = false;

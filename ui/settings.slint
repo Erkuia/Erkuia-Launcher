@@ -2,6 +2,7 @@ import { ScrollView } from "std-widgets.slint";
 import { Theme, Typo } from "theme.slint";
 import { SecondaryButton, ReadOnlyField, Divider } from "controls.slint";
 import { ValueSlider } from "slider.slint";
+import { ModRow, AddModButton, ModEntry } from "mods.slint";
 
 component SectionLabel inherits VerticalLayout {
     in property <string> text;
@@ -46,9 +47,15 @@ component CloseButton inherits Rectangle {
 export component SettingsPanel inherits VerticalLayout {
     in property <string> program-directory;
     in-out property <int> target-fps;
+    in-out property <bool> adaptive-rendering;
+    in property <[ModEntry]> local-mods;
     callback close();
     callback open-directory();
     callback fps-changed(int);
+    callback adaptive-changed(bool);
+    callback add-mod();
+    callback toggle-mod(string, bool);
+    callback remove-mod(string);
 
     spacing: 0px;
 
@@ -124,7 +131,52 @@ export component SettingsPanel inherits VerticalLayout {
 
                 Divider { }
 
-                @children
+                VerticalLayout {
+                    padding-top: 18px;
+
+                    SectionLabel {
+                        text: "모드";
+                    }
+                }
+
+                VerticalLayout {
+                    padding-top: 8px;
+                    spacing: 14px;
+
+                    ModRow {
+                        name: "RendogClient";
+                        description: "서버 자동 접속 · 필수 모드";
+                        required: true;
+                    }
+
+                    ModRow {
+                        name: "적응형 렌더링";
+                        description: "FPS 목표에 맞춰 셰이더 품질을 자동 조정";
+                        enabled <=> root.adaptive-rendering;
+                        toggled(on) => {
+                            root.adaptive-changed(on);
+                        }
+                    }
+
+                    for entry in root.local-mods: ModRow {
+                        name: entry.name;
+                        description: entry.description;
+                        removable: true;
+                        enabled: entry.enabled;
+                        toggled(on) => {
+                            root.toggle-mod(entry.id, on);
+                        }
+                        removed => {
+                            root.remove-mod(entry.id);
+                        }
+                    }
+
+                    AddModButton {
+                        clicked => {
+                            root.add-mod();
+                        }
+                    }
+                }
             }
         }
     }
