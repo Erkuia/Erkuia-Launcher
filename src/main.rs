@@ -29,6 +29,7 @@ mod paths;
 mod runtime;
 mod shell;
 mod task;
+mod update;
 
 use auth::{
     avatar,
@@ -476,6 +477,63 @@ fn start_up(app: &LauncherWindow, state: &AppState) {
 
     apply_accounts(app, state);
     refresh_mods(app, state);
+    check_for_update(app, state);
+}
+
+fn pending_update(state: &AppState) -> Option<update::Version> {
+    state
+        .manifest
+        .lock()
+        .ok()
+        .and_then(|manifest| update::available(&manifest, env!("CARGO_PKG_VERSION")))
+}
+
+fn announce_update(app: &LauncherWindow, found: Option<update::Version>) {
+    match found {
+        Some(version) => {
+            app.set_update_version(format!("v{version}").into());
+            app.set_update_available(true);
+        }
+        None => app.set_update_available(false),
+    }
+}
+
+fn check_for_update(app: &LauncherWindow, state: &AppState) {
+    let Some(paths) = state.paths.lock().ok().and_then(|paths| paths.clone()) else {
+        return;
+    };
+
+    // The cached manifest answers immediately and works offline; the fetch below
+    // only corrects it.
+    announce_update(app, pending_update(state));
+
+    let owner = state.clone();
+    let weak = app.as_weak();
+
+    std::thread::spawn(move || {
+        // A failed check gets a log line and nothing else. The launcher is fully
+        // usable without it, and "GitHub was unreachable" is not something the
+        // person can act on from a modal.
+        let manifest = match manifest::fetch(manifest::DEFAULT_URL, &paths.cache_dir()) {
+            Ok(manifest) => manifest,
+            Err(error) => {
+                log::info!("업데이트 확인을 건너뜁니다: {error:#}");
+                return;
+            }
+        };
+
+        if let Ok(mut stored) = owner.manifest.lock() {
+            *stored = manifest;
+        }
+
+        let found = pending_update(&owner);
+
+        if let Some(version) = found {
+            log::info!("새 런처 버전 v{version} 이(가) 있습니다.");
+        }
+
+        let _ = weak.upgrade_in_event_loop(move |app| announce_update(&app, found));
+    });
 }
 
 fn refresh_mods(app: &LauncherWindow, state: &AppState) {

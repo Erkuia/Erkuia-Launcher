@@ -11,6 +11,8 @@ import { ModEntry } from "mods.slint";
 export component LauncherWindow inherits Window {
     in-out property <string> product-name: "Rendog Launcher";
     in-out property <string> launcher-version: "v0.1.0";
+    in-out property <bool> update-available;
+    in-out property <string> update-version;
     in-out property <string> server-address: "rendog.kr";
     in-out property <string> minecraft-version: "1.20.4";
     in-out property <string> program-directory: "";
@@ -244,8 +246,10 @@ export component LauncherWindow inherits Window {
                         }
 
                         Text {
-                            text: root.launcher-version;
-                            color: Theme.faint;
+                            text: root.update-available
+                                ? root.launcher-version + " · 새 버전 " + root.update-version + " 있음"
+                                : root.launcher-version;
+                            color: root.update-available ? Theme.accent : Theme.faint;
                             font-size: Typo.footer;
                             vertical-stretch: 0;
                         }
