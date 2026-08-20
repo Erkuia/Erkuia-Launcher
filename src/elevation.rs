@@ -18,6 +18,16 @@ pub fn install_dir_from_args() -> Option<String> {
     value_after_arg("--install-dir")
 }
 
+/// The writable data directory resolved by the *pre-elevation* process.
+///
+/// `%APPDATA%` must not be re-resolved after UAC elevation. If a standard user
+/// answers the UAC prompt with a different Windows administrator, the elevated
+/// process runs under that administrator's Windows profile and `%APPDATA%`
+/// would point at the wrong user folder.
+pub fn data_dir_from_args() -> Option<String> {
+    value_after_arg("--data-dir")
+}
+
 pub fn desktop_shortcut_from_args() -> Option<bool> {
     bool_after_arg("--desktop-shortcut")
 }
@@ -54,6 +64,7 @@ pub fn is_running_as_admin() -> anyhow::Result<bool> {
 
 pub fn restart_as_admin_for_install(
     install_dir: &str,
+    data_dir: &Path,
     create_desktop_shortcut: bool,
     run_after_install: bool,
     window_position: (i32, i32),
@@ -62,6 +73,8 @@ pub fn restart_as_admin_for_install(
         ELEVATED_INSTALL_FLAG.to_string(),
         "--install-dir".to_string(),
         install_dir.to_string(),
+        "--data-dir".to_string(),
+        data_dir.display().to_string(),
         "--desktop-shortcut".to_string(),
         create_desktop_shortcut.to_string(),
         "--run-after-install".to_string(),
@@ -75,11 +88,13 @@ pub fn restart_as_admin_for_install(
     start_elevated(&args)
 }
 
-pub fn restart_as_admin_for_uninstall(install_dir: &Path) -> anyhow::Result<()> {
+pub fn restart_as_admin_for_uninstall(install_dir: &Path, data_dir: &Path) -> anyhow::Result<()> {
     let args = vec![
         UNINSTALL_FLAG.to_string(),
         "--install-dir".to_string(),
         install_dir.display().to_string(),
+        "--data-dir".to_string(),
+        data_dir.display().to_string(),
     ];
 
     start_elevated(&args)

@@ -5,7 +5,7 @@ use anyhow::{bail, Context};
 use crate::{
     elevation,
     manifest::Manifest,
-    powershell,
+    paths, powershell,
     progress::{InstallEvent, InstallStage},
 };
 
@@ -17,6 +17,7 @@ const UNINSTALL_KEY: &str =
 pub fn register_uninstaller(
     manifest: &Manifest,
     install_dir: &Path,
+    data_dir: &Path,
     emit: EventSink<'_>,
 ) -> anyhow::Result<()> {
     emit(InstallEvent::Progress {
@@ -26,11 +27,15 @@ pub fn register_uninstaller(
     });
 
     let installer_path = copy_uninstaller_to_install_dir(install_dir)?;
+    // The data directory is baked into the uninstall command at install time.
+    // Windows runs the uninstaller elevated, where re-expanding `%APPDATA%`
+    // could point at the wrong user profile.
     let uninstall_command = format!(
-        "{} {} --install-dir {}",
+        "{} {} --install-dir {} --data-dir {}",
         powershell::quote_command_line_arg(&installer_path.display().to_string()),
         elevation::UNINSTALL_FLAG,
-        powershell::quote_command_line_arg(&install_dir.display().to_string())
+        powershell::quote_command_line_arg(&install_dir.display().to_string()),
+        powershell::quote_command_line_arg(&data_dir.display().to_string())
     );
 
     let script = format!(
@@ -77,20 +82,26 @@ pub fn run_uninstall_from_args(manifest: &Manifest) -> anyhow::Result<()> {
     let install_dir = uninstall_install_dir_from_args()
         .or_else(|| default_install_dir_from_manifest(manifest).ok())
         .context("missing uninstall install directory")?;
+    let data_dir = elevation::data_dir_from_args()
+        .map(PathBuf::from)
+        .or_else(|| paths::expand(&manifest.install_plan.data_dir).ok())
+        .context("missing uninstall data directory")?;
 
     if !elevation::is_running_as_admin().unwrap_or(false) {
-        elevation::restart_as_admin_for_uninstall(&install_dir)?;
+        elevation::restart_as_admin_for_uninstall(&install_dir, &data_dir)?;
         return Ok(());
     }
 
-    run_uninstall(manifest, &install_dir)
+    run_uninstall(manifest, &install_dir, &data_dir)
 }
 
-fn run_uninstall(manifest: &Manifest, install_dir: &Path) -> anyhow::Result<()> {
+fn run_uninstall(manifest: &Manifest, install_dir: &Path, data_dir: &Path) -> anyhow::Result<()> {
     remove_shortcuts(manifest)?;
 
     if manifest.uninstall.preserve_user_data_by_default {
-        preserve_user_data(install_dir)?;
+        preserve_user_data(manifest, data_dir)?;
+    } else {
+        remove_data_dir(data_dir)?;
     }
 
     run_powershell(&format!(
@@ -104,26 +115,41 @@ fn run_uninstall(manifest: &Manifest, install_dir: &Path) -> anyhow::Result<()> 
     Ok(())
 }
 
-fn preserve_user_data(install_dir: &Path) -> anyhow::Result<()> {
-    let user_data_dir = install_dir.join("user-data");
-
-    if !user_data_dir.exists() {
+/// Keep the launcher's runtime data by renaming the data directory next to
+/// itself, so a later reinstall starts clean but the user keeps their files.
+fn preserve_user_data(manifest: &Manifest, data_dir: &Path) -> anyhow::Result<()> {
+    if !data_dir.exists() {
         return Ok(());
     }
 
-    let backup_dir = install_dir.with_file_name("Rendog Launcher User Data");
+    let backup_dir = data_dir.with_file_name(&manifest.uninstall.user_data_backup_name);
+    if backup_dir == data_dir {
+        return Ok(());
+    }
+
     if backup_dir.exists() {
         std::fs::remove_dir_all(&backup_dir)
             .with_context(|| format!("failed to replace {}", backup_dir.display()))?;
     }
 
-    std::fs::rename(&user_data_dir, &backup_dir).with_context(|| {
+    std::fs::rename(data_dir, &backup_dir).with_context(|| {
         format!(
             "failed to preserve user data from {} to {}",
-            user_data_dir.display(),
+            data_dir.display(),
             backup_dir.display()
         )
     })?;
+
+    Ok(())
+}
+
+fn remove_data_dir(data_dir: &Path) -> anyhow::Result<()> {
+    if !data_dir.exists() {
+        return Ok(());
+    }
+
+    std::fs::remove_dir_all(data_dir)
+        .with_context(|| format!("failed to remove {}", data_dir.display()))?;
 
     Ok(())
 }
@@ -203,17 +229,7 @@ fn uninstall_install_dir_from_args() -> Option<PathBuf> {
 }
 
 fn default_install_dir_from_manifest(manifest: &Manifest) -> anyhow::Result<PathBuf> {
-    if let Some(rest) = manifest
-        .install_plan
-        .default_install_dir
-        .strip_prefix("%ProgramFiles%")
-    {
-        let program_files = std::env::var("ProgramFiles")
-            .context("ProgramFiles environment variable is missing")?;
-        return Ok(Path::new(&program_files).join(rest.trim_start_matches(['\\', '/'])));
-    }
-
-    Ok(PathBuf::from(&manifest.install_plan.default_install_dir))
+    paths::expand(&manifest.install_plan.default_install_dir)
 }
 
 fn run_powershell(script: &str) -> anyhow::Result<()> {

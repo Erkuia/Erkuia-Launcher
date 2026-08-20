@@ -17,6 +17,7 @@
   },
   "installPlan": {
     "defaultInstallDir": "%ProgramFiles%\\Rendog Launcher",
+    "dataDir": "%APPDATA%\\RendogLauncher",
     "components": [
       {
         "id": "rendog-client",
@@ -26,6 +27,7 @@
         "status": "ready",
         "url": "https://github.com/MellDa1024/RendogClient-1.20.4/releases/download/Delta/RendogClient-Delta.jar",
         "fileName": "RendogClient-Delta.jar",
+        "targetRoot": "data",
         "targetPath": "minecraft\\mods\\RendogClient-Delta.jar",
         "size": 8709016,
         "sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
@@ -38,6 +40,7 @@
         "status": "pending",
         "reason": "RendogLauncher artifact is intentionally deferred.",
         "fileName": "RendogLauncher.exe",
+        "targetRoot": "install",
         "targetPath": "RendogLauncher.exe"
       }
     ]
@@ -47,7 +50,8 @@
     "displayName": "Rendog Launcher",
     "removeDesktopShortcut": true,
     "removeStartMenuShortcut": true,
-    "preserveUserDataByDefault": true
+    "preserveUserDataByDefault": true,
+    "userDataBackupName": "Rendog Launcher User Data"
   },
   "progressWeights": {
     "prepare": {

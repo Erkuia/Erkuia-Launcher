@@ -9,7 +9,7 @@ use anyhow::{bail, Context};
 use sha2::{Digest, Sha256};
 
 use crate::{
-    manifest::{Component, ComponentStatus},
+    manifest::{Component, ComponentStatus, TargetRoot},
     progress::{InstallEvent, InstallStage},
 };
 
@@ -68,6 +68,7 @@ pub fn download_ready_components(
 
         downloaded.push(DownloadedComponent {
             file_path,
+            target_root: component.target_root,
             target_path: PathBuf::from(&component.target_path),
         });
     }
@@ -202,5 +203,6 @@ fn cache_file_path(cache_dir: &Path, file_name: &str) -> anyhow::Result<PathBuf>
 #[derive(Debug)]
 pub struct DownloadedComponent {
     pub file_path: PathBuf,
+    pub target_root: TargetRoot,
     pub target_path: PathBuf,
 }

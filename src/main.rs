@@ -11,6 +11,7 @@ mod elevation;
 mod install;
 mod install_files;
 mod manifest;
+mod paths;
 mod powershell;
 mod progress;
 mod shortcuts;
@@ -46,14 +47,20 @@ fn main() -> anyhow::Result<()> {
     let is_admin = elevation::is_running_as_admin().unwrap_or(false);
     let resuming_elevated = elevation::is_elevated_install_mode();
 
+    // Resolved once, in whichever process started first. When we relaunch
+    // elevated the value is carried over on the command line instead of being
+    // expanded again inside the administrator's environment.
+    let data_dir: PathBuf = elevation::data_dir_from_args()
+        .map(PathBuf::from)
+        .or_else(|| install::resolve_data_dir(&manifest).ok())
+        .unwrap_or_else(|| PathBuf::from(&manifest.install_plan.data_dir));
+
     let app = InstallerWindow::new().context("failed to create installer window")?;
 
     app.set_product_name(manifest.product.name.clone().into());
     app.set_installer_name(manifest.installer.name.clone().into());
     app.set_installer_version(format!("v{}", env!("CARGO_PKG_VERSION")).into());
-    let default_install_dir =
-        install::resolve_install_path(&manifest.install_plan.default_install_dir)
-            .unwrap_or_else(|_| PathBuf::from(&manifest.install_plan.default_install_dir));
+    let default_install_dir = paths::expand_or_literal(&manifest.install_plan.default_install_dir);
     app.set_install_path(default_install_dir.display().to_string().into());
     app.set_run_after_install(manifest.installer.default_run_after_install);
     app.set_create_desktop_shortcut(manifest.installer.default_create_desktop_shortcut);
@@ -120,6 +127,8 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
+    let data_dir = Arc::new(data_dir);
+
     app.on_start_clicked({
         let app = app.as_weak();
         let manifest = Arc::clone(&manifest);
@@ -145,6 +154,7 @@ fn main() -> anyhow::Result<()> {
     app.on_install_clicked({
         let app = app.as_weak();
         let manifest = Arc::clone(&manifest);
+        let data_dir = Arc::clone(&data_dir);
         move || {
             let Some(app) = app.upgrade() else {
                 return;
@@ -159,6 +169,7 @@ fn main() -> anyhow::Result<()> {
 
                 match elevation::restart_as_admin_for_install(
                     &app.get_install_path(),
+                    &data_dir,
                     app.get_create_desktop_shortcut(),
                     app.get_run_after_install(),
                     (position.x, position.y),
@@ -177,7 +188,7 @@ fn main() -> anyhow::Result<()> {
                 return;
             }
 
-            begin_install(&app, Arc::clone(&manifest));
+            begin_install(&app, Arc::clone(&manifest), Arc::clone(&data_dir));
         }
     });
 
@@ -210,8 +221,7 @@ fn main() -> anyhow::Result<()> {
         let manifest = Arc::clone(&manifest);
         move || {
             if let Some(app) = app.upgrade() {
-                let current_path = install::resolve_install_path(&app.get_install_path())
-                    .unwrap_or_else(|_| PathBuf::from(app.get_install_path().to_string()));
+                let current_path = paths::expand_or_literal(&app.get_install_path());
 
                 if let Some(path) = dialogs::pick_install_directory(&current_path) {
                     app.set_install_path(path.display().to_string().into());
@@ -241,6 +251,7 @@ fn main() -> anyhow::Result<()> {
 
         let app_weak = app.as_weak();
         let manifest = Arc::clone(&manifest);
+        let data_dir = Arc::clone(&data_dir);
         slint::Timer::single_shot(Duration::from_millis(80), move || {
             if let Some(app) = app_weak.upgrade() {
                 // Re-apply once the window is actually mapped; some window
@@ -248,7 +259,7 @@ fn main() -> anyhow::Result<()> {
                 if let Some((x, y)) = restored_position {
                     app.window().set_position(PhysicalPosition::new(x, y));
                 }
-                begin_install(&app, Arc::clone(&manifest));
+                begin_install(&app, Arc::clone(&manifest), Arc::clone(&data_dir));
             }
         });
     }
@@ -257,7 +268,11 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn begin_install(app: &InstallerWindow, manifest: Arc<manifest::Manifest>) {
+fn begin_install(
+    app: &InstallerWindow,
+    manifest: Arc<manifest::Manifest>,
+    data_dir: Arc<PathBuf>,
+) {
     app.set_current_step(state::Step::Installing.index());
     app.set_progress_percent(0);
     app.set_progress_message("설치 준비 중...".into());
@@ -267,6 +282,7 @@ fn begin_install(app: &InstallerWindow, manifest: Arc<manifest::Manifest>) {
         app.as_weak(),
         manifest,
         app.get_install_path().into(),
+        data_dir,
         app.get_create_desktop_shortcut(),
     );
 }
@@ -279,8 +295,7 @@ fn finish_installer(app: &InstallerWindow, launch: bool, is_admin: bool) {
         return;
     }
 
-    let install_dir = install::resolve_install_path(&app.get_install_path())
-        .unwrap_or_else(|_| PathBuf::from(app.get_install_path().to_string()));
+    let install_dir = paths::expand_or_literal(&app.get_install_path());
 
     let _ = shortcuts::apply_desktop_shortcut(&install_dir, app.get_create_desktop_shortcut());
 
@@ -314,12 +329,13 @@ fn start_install(
     app: slint::Weak<InstallerWindow>,
     manifest: Arc<manifest::Manifest>,
     install_path: String,
+    data_dir: Arc<PathBuf>,
     create_desktop_shortcut: bool,
 ) {
     std::thread::spawn(move || {
         let options = install::InstallOptions {
-            install_dir: install::resolve_install_path(&install_path)
-                .unwrap_or_else(|_| PathBuf::from(install_path)),
+            install_dir: paths::expand_or_literal(&install_path),
+            data_dir: data_dir.as_ref().clone(),
             create_desktop_shortcut,
         };
 

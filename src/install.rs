@@ -6,8 +6,10 @@ use std::{
 use anyhow::{bail, Context};
 
 use crate::{
-    download, install_files,
+    download,
+    install_files::{self, InstallRoots},
     manifest::{ComponentStatus, Manifest},
+    paths,
     progress::{InstallEvent, InstallStage},
     shortcuts, uninstall,
 };
@@ -16,6 +18,10 @@ type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
 pub struct InstallOptions {
     pub install_dir: PathBuf,
+    /// Writable runtime directory. Resolved before UAC elevation so the
+    /// elevated process writes into the *logged-on* Windows user's profile,
+    /// not the profile of whichever Windows administrator answered the prompt.
+    pub data_dir: PathBuf,
     pub create_desktop_shortcut: bool,
 }
 
@@ -39,6 +45,13 @@ pub fn run_install(
         )
     })?;
 
+    std::fs::create_dir_all(&options.data_dir).with_context(|| {
+        format!(
+            "failed to create data directory {}",
+            options.data_dir.display()
+        )
+    })?;
+
     let cache_dir = installer_cache_dir()?;
     std::fs::create_dir_all(&cache_dir)
         .with_context(|| format!("failed to create installer cache {}", cache_dir.display()))?;
@@ -52,8 +65,13 @@ pub fn run_install(
     let downloaded =
         download::download_ready_components(&manifest.install_plan.components, &cache_dir, emit)?;
 
+    let roots = InstallRoots {
+        install_dir: options.install_dir.clone(),
+        data_dir: options.data_dir.clone(),
+    };
+
     let installed_components =
-        install_files::install_downloaded_components(&downloaded, &options.install_dir, emit)?;
+        install_files::install_downloaded_components(&downloaded, &roots, emit)?;
 
     shortcuts::create_launcher_shortcuts(
         &options.install_dir,
@@ -62,7 +80,7 @@ pub fn run_install(
     )
     .context("failed to create launcher shortcuts")?;
 
-    uninstall::register_uninstaller(manifest, &options.install_dir, emit)
+    uninstall::register_uninstaller(manifest, &options.install_dir, &options.data_dir, emit)
         .context("failed to register uninstaller")?;
 
     emit(InstallEvent::Progress {
@@ -104,22 +122,13 @@ fn installer_cache_dir() -> anyhow::Result<PathBuf> {
     Ok(std::env::temp_dir().join("rendog-launcher-installer"))
 }
 
-pub fn resolve_install_path(path: &str) -> anyhow::Result<PathBuf> {
-    if let Some(rest) = path.strip_prefix("%ProgramFiles%") {
-        let program_files = std::env::var("ProgramFiles")
-            .context("ProgramFiles environment variable is missing")?;
-        return Ok(Path::new(&program_files).join(trim_path_separator(rest)));
-    }
-
-    if path.contains('%') {
-        bail!("unsupported environment variable in install path: {}", path);
-    }
-
-    Ok(PathBuf::from(path))
-}
-
-fn trim_path_separator(path: &str) -> &str {
-    path.trim_start_matches(['\\', '/'])
+/// Resolve the writable runtime directory for the current Windows user.
+///
+/// Must be called *before* UAC elevation: inside the elevated process
+/// `%APPDATA%` can resolve to a different Windows user folder when a standard
+/// user answers the prompt with administrator credentials.
+pub fn resolve_data_dir(manifest: &Manifest) -> anyhow::Result<PathBuf> {
+    paths::expand(&manifest.install_plan.data_dir)
 }
 
 /// Start the installed launcher.

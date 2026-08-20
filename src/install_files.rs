@@ -8,24 +8,50 @@ use anyhow::{bail, Context};
 
 use crate::{
     download::DownloadedComponent,
+    manifest::TargetRoot,
     progress::{InstallEvent, InstallStage},
 };
 
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
+/// The two roots a component can be installed into.
+///
+/// `install_dir` holds program binaries and normally lives under
+/// `%ProgramFiles%`, so it is only writable while elevated. `data_dir` holds
+/// everything the launcher mutates later (game files, mods, config) and must
+/// stay writable without administrator rights.
+#[derive(Debug, Clone)]
+pub struct InstallRoots {
+    pub install_dir: PathBuf,
+    pub data_dir: PathBuf,
+}
+
+impl InstallRoots {
+    pub fn root_for(&self, target_root: TargetRoot) -> &Path {
+        match target_root {
+            TargetRoot::Install => &self.install_dir,
+            TargetRoot::Data => &self.data_dir,
+        }
+    }
+}
+
 pub fn install_downloaded_components(
     downloaded: &[DownloadedComponent],
-    install_dir: &Path,
+    roots: &InstallRoots,
     emit: EventSink<'_>,
 ) -> anyhow::Result<Vec<InstalledComponent>> {
-    std::fs::create_dir_all(install_dir).context("failed to create install directory")?;
+    std::fs::create_dir_all(&roots.install_dir).context("failed to create install directory")?;
+    std::fs::create_dir_all(&roots.data_dir).context("failed to create data directory")?;
 
     let total_size = total_input_size(downloaded)?;
     let mut installed_before = 0_u64;
     let mut installed = Vec::new();
 
     for component in downloaded {
-        let target_path = safe_join(install_dir, &component.target_path)?;
+        let target_path = safe_join(
+            roots.root_for(component.target_root),
+            &component.target_path,
+        )?;
 
         if let Some(parent) = target_path.parent() {
             std::fs::create_dir_all(parent).with_context(|| {
@@ -118,11 +144,42 @@ fn safe_join(root: &Path, relative: &Path) -> anyhow::Result<PathBuf> {
             part,
             Component::ParentDir | Component::RootDir | Component::Prefix(_)
         ) {
-            bail!("install target path escapes install directory");
+            bail!("install target path escapes its root directory");
         }
     }
 
     Ok(root.join(relative))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn roots() -> InstallRoots {
+        InstallRoots {
+            install_dir: PathBuf::from(r"C:\Program Files\Rendog Launcher"),
+            data_dir: PathBuf::from(r"C:\Users\test\AppData\Roaming\RendogLauncher"),
+        }
+    }
+
+    #[test]
+    fn routes_components_to_their_root() {
+        let roots = roots();
+        assert_eq!(
+            roots.root_for(TargetRoot::Install),
+            Path::new(r"C:\Program Files\Rendog Launcher")
+        );
+        assert_eq!(
+            roots.root_for(TargetRoot::Data),
+            Path::new(r"C:\Users\test\AppData\Roaming\RendogLauncher")
+        );
+    }
+
+    #[test]
+    fn rejects_paths_escaping_their_root() {
+        assert!(safe_join(Path::new(r"C:\root"), Path::new(r"..\evil.exe")).is_err());
+        assert!(safe_join(Path::new(r"C:\root"), Path::new(r"C:\evil.exe")).is_err());
+    }
 }
 
 fn percent(done: u64, total: u64) -> f32 {

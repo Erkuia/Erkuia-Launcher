@@ -10,9 +10,30 @@ Custom online installer for Rendog Launcher.
 - Install mode: online only
 - UI stack: Rust + Slint
 
+## Directory Layout
+
+The installer writes into two separate roots. Program binaries need
+administrator rights; everything the launcher mutates later must not.
+
+| Root | Path | Contents | Writable without admin |
+| --- | --- | --- | --- |
+| `install` | `%ProgramFiles%\Rendog Launcher` | `RendogLauncher.exe`, `RendogLauncherInstaller.exe` | No |
+| `data` | `%APPDATA%\RendogLauncher` | `minecraft\` (game files, mods, config, logs) | Yes |
+
+Each manifest component picks its root with `targetRoot` (`install` or `data`,
+defaulting to `install`), and `targetPath` is relative to that root.
+
+`%APPDATA%` is resolved **before** the UAC relaunch and handed to the elevated
+process as `--data-dir`. Re-expanding it after elevation could resolve to a
+different Windows profile when a standard user answers the prompt with
+administrator credentials. The same value is baked into the registered
+`UninstallString`.
+
 ## Language and Structure
 
 - Rust owns installer state, file IO, download, verification, and Windows integration.
+- `src/paths.rs` expands the manifest's environment placeholders (`%ProgramFiles%`,
+  `%ProgramData%`, `%APPDATA%`, `%LOCALAPPDATA%`, `%USERPROFILE%`) and rejects any other.
 - Slint owns the native installer UI and Figma-based screen layout.
 - `manifest.json` defines installable components and progress stage weights.
 - `src/progress.rs` defines the event model used to update the UI in real time.
@@ -48,12 +69,14 @@ Custom online installer for Rendog Launcher.
 
 - `RendogClient-Delta.jar`
 - Source: `https://github.com/MellDa1024/RendogClient-1.20.4/releases/download/Delta/RendogClient-Delta.jar`
-- Target path: `minecraft/mods/RendogClient-Delta.jar`
+- Target root: `data`
+- Target path: `minecraft\mods\RendogClient-Delta.jar` (→ `%APPDATA%\RendogLauncher\minecraft\mods\`)
 - SHA-256: `72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a`
 
 ### Pending
 
 - `RendogLauncher.exe`
+- Target root: `install`
 - Reason: launcher artifact is intentionally deferred.
 
 ## Progress Stages
@@ -112,7 +135,7 @@ Windows Apps uninstall entry
   -> RendogLauncherInstaller.exe --uninstall --install-dir <path>
   -> request administrator permission when needed
   -> remove desktop/start menu shortcuts
-  -> preserve user-data by moving it next to the install directory
+  -> rename %APPDATA%\RendogLauncher to "Rendog Launcher User Data" when preserving
   -> remove HKLM uninstall entry
   -> schedule install directory deletion
 ```
