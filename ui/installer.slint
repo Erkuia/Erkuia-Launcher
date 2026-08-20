@@ -292,23 +292,7 @@ component TitleBar inherits Rectangle {
 
     HorizontalLayout {
         spacing: 0px;
-        padding-left: 14px;
-
-        VerticalLayout {
-            alignment: center;
-
-            Image {
-                width: 16px;
-                height: 16px;
-                image-fit: contain;
-                source: @image-url("../assets/rendog-logo-32.png");
-            }
-        }
-
-        Rectangle {
-            width: 9px;
-            background: transparent;
-        }
+        padding-left: 18px;
 
         Text {
             text: root.title;
