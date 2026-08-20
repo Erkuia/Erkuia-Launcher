@@ -7,6 +7,7 @@ use slint::{PhysicalPosition, TimerMode};
 
 mod config;
 mod error;
+mod logger;
 mod paths;
 
 use config::Config;
@@ -190,6 +191,18 @@ fn start_up(
         }
     };
 
+    // Logging comes up before anything else can fail, so later errors leave a
+    // trace even though the window has no console to print to.
+    if let Err(error) = logger::init(&resolved.logs_dir()) {
+        show_error(app, ErrorCode::Config, &error);
+    }
+
+    log::info!(
+        "Rendog Launcher v{} 시작 · data={}",
+        env!("CARGO_PKG_VERSION"),
+        resolved.data_dir().display()
+    );
+
     app.set_data_directory(resolved.data_dir().display().to_string().into());
 
     let loaded = match Config::load(&resolved.config_file()) {
@@ -200,6 +213,7 @@ fn start_up(
         // A broken config must not block startup: fall back to defaults, but say
         // so rather than silently overwriting whatever the user had.
         Err(error) => {
+            log::error!("설정을 불러오지 못해 기본값으로 시작합니다: {error:#}");
             show_error(app, ErrorCode::Config, &error);
             Config::default()
         }
@@ -207,9 +221,31 @@ fn start_up(
 
     app.set_target_fps(loaded.target_fps);
     app.set_adaptive_rendering(loaded.adaptive_rendering);
+    apply_accounts(app, &loaded);
 
     *settings.borrow_mut() = loaded;
     *paths.borrow_mut() = Some(resolved);
+}
+
+fn apply_accounts(app: &LauncherWindow, settings: &Config) {
+    let selected = settings.selected();
+
+    app.set_signed_in(selected.is_some());
+    app.set_account_name(selected.map(|a| a.name.clone()).unwrap_or_default().into());
+    app.set_account_initial(selected.map(|a| a.initial()).unwrap_or_default().into());
+
+    let others: Vec<Account> = settings
+        .others()
+        .into_iter()
+        .map(|record| Account {
+            id: record.id.clone().into(),
+            name: record.name.clone().into(),
+            initial: record.initial().into(),
+            avatar: slint::Image::default(),
+        })
+        .collect();
+
+    app.set_other_accounts(slint::ModelRc::new(slint::VecModel::from(others)));
 }
 
 fn save_settings(
@@ -223,6 +259,8 @@ fn save_settings(
     let snapshot = settings.borrow().clone();
 
     if let Err(error) = snapshot.save(&path) {
+        log::error!("설정 저장 실패: {error:#}");
+
         if let Some(app) = app.upgrade() {
             show_error(&app, ErrorCode::Config, &error);
         }
@@ -231,6 +269,8 @@ fn save_settings(
 
 fn show_error(app: &LauncherWindow, code: ErrorCode, error: &anyhow::Error) {
     let user_error = UserError::from_error(code, error);
+
+    log::error!("[{}] {error:#}", user_error.code);
 
     app.set_error_code(user_error.code.as_str().into());
     app.set_error_message(user_error.message.into());

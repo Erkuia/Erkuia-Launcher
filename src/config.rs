@@ -5,7 +5,27 @@ use serde::{Deserialize, Serialize};
 
 pub const MIN_FPS: i32 = 30;
 pub const MAX_FPS: i32 = 150;
-pub const DEFAULT_FPS: i32 = 105;
+pub const DEFAULT_FPS: i32 = 60;
+
+/// Non-secret half of a signed-in account.
+///
+/// Refresh tokens never live here — `config.json` is plain text. They go into
+/// the DPAPI-encrypted store built in L4-7, keyed by `id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AccountRecord {
+    pub id: String,
+    pub name: String,
+}
+
+impl AccountRecord {
+    pub fn initial(&self) -> String {
+        self.name
+            .chars()
+            .next()
+            .map(|first| first.to_uppercase().to_string())
+            .unwrap_or_else(|| "?".to_string())
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
@@ -13,6 +33,8 @@ pub struct Config {
     pub target_fps: i32,
     #[serde(default = "default_adaptive_rendering")]
     pub adaptive_rendering: bool,
+    #[serde(default)]
+    pub accounts: Vec<AccountRecord>,
     #[serde(default)]
     pub selected_account: Option<String>,
 }
@@ -30,6 +52,7 @@ impl Default for Config {
         Self {
             target_fps: default_fps(),
             adaptive_rendering: default_adaptive_rendering(),
+            accounts: Vec::new(),
             selected_account: None,
         }
     }
@@ -73,7 +96,51 @@ impl Config {
 
     pub fn normalized(mut self) -> Self {
         self.target_fps = self.target_fps.clamp(MIN_FPS, MAX_FPS);
+        self.accounts.dedup_by(|a, b| a.id == b.id);
+
+        if !self
+            .selected_account
+            .as_ref()
+            .is_some_and(|id| self.accounts.iter().any(|account| &account.id == id))
+        {
+            self.selected_account = self.accounts.first().map(|account| account.id.clone());
+        }
+
         self
+    }
+
+    pub fn selected(&self) -> Option<&AccountRecord> {
+        let id = self.selected_account.as_ref()?;
+
+        self.accounts.iter().find(|account| &account.id == id)
+    }
+
+    pub fn others(&self) -> Vec<&AccountRecord> {
+        self.accounts
+            .iter()
+            .filter(|account| Some(&account.id) != self.selected_account.as_ref())
+            .collect()
+    }
+
+    pub fn upsert_account(&mut self, account: AccountRecord) {
+        match self
+            .accounts
+            .iter_mut()
+            .find(|existing| existing.id == account.id)
+        {
+            Some(existing) => *existing = account.clone(),
+            None => self.accounts.push(account.clone()),
+        }
+
+        self.selected_account = Some(account.id);
+    }
+
+    pub fn remove_account(&mut self, id: &str) {
+        self.accounts.retain(|account| account.id != id);
+
+        if self.selected_account.as_deref() == Some(id) {
+            self.selected_account = self.accounts.first().map(|account| account.id.clone());
+        }
     }
 }
 
@@ -115,18 +182,85 @@ mod tests {
         assert_eq!(Config::load(&dir.file()).unwrap(), Config::default());
     }
 
+    fn account(id: &str, name: &str) -> AccountRecord {
+        AccountRecord {
+            id: id.to_string(),
+            name: name.to_string(),
+        }
+    }
+
     #[test]
     fn round_trips_through_disk() {
         let dir = TempDir::new("roundtrip");
         let config = Config {
-            target_fps: 60,
+            target_fps: 90,
             adaptive_rendering: false,
-            selected_account: Some("abc".to_string()),
+            accounts: vec![account("a", "Rendog_Player"), account("b", "Rendog_Player2")],
+            selected_account: Some("b".to_string()),
         };
 
         config.save(&dir.file()).unwrap();
 
         assert_eq!(Config::load(&dir.file()).unwrap(), config);
+    }
+
+    #[test]
+    fn selection_falls_back_when_it_points_at_a_missing_account() {
+        let config = Config {
+            accounts: vec![account("a", "Alice")],
+            selected_account: Some("gone".to_string()),
+            ..Config::default()
+        }
+        .normalized();
+
+        assert_eq!(config.selected_account.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn selection_is_cleared_when_no_accounts_remain() {
+        let config = Config {
+            selected_account: Some("a".to_string()),
+            ..Config::default()
+        }
+        .normalized();
+
+        assert_eq!(config.selected_account, None);
+    }
+
+    #[test]
+    fn upsert_replaces_by_id_and_selects() {
+        let mut config = Config::default();
+        config.upsert_account(account("a", "Alice"));
+        config.upsert_account(account("b", "Bob"));
+        config.upsert_account(account("a", "Alice_Renamed"));
+
+        assert_eq!(config.accounts.len(), 2);
+        assert_eq!(config.selected_account.as_deref(), Some("a"));
+        assert_eq!(config.selected().map(|a| a.name.as_str()), Some("Alice_Renamed"));
+        assert_eq!(
+            config.others().iter().map(|a| a.id.as_str()).collect::<Vec<_>>(),
+            vec!["b"]
+        );
+    }
+
+    #[test]
+    fn removing_the_selected_account_moves_selection() {
+        let mut config = Config::default();
+        config.upsert_account(account("a", "Alice"));
+        config.upsert_account(account("b", "Bob"));
+        config.remove_account("b");
+
+        assert_eq!(config.selected_account.as_deref(), Some("a"));
+
+        config.remove_account("a");
+        assert_eq!(config.selected_account, None);
+        assert!(config.accounts.is_empty());
+    }
+
+    #[test]
+    fn initial_comes_from_the_first_character() {
+        assert_eq!(account("a", "rendog").initial(), "R");
+        assert_eq!(account("a", "").initial(), "?");
     }
 
     #[test]
