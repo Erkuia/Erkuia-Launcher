@@ -1,6 +1,6 @@
 #![windows_subsystem = "windows"]
 
-use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
+use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use slint::PhysicalPosition;
@@ -15,6 +15,7 @@ mod powershell;
 mod progress;
 mod shortcuts;
 mod state;
+mod storage;
 mod uninstall;
 
 slint::include_modules!();
@@ -37,14 +38,14 @@ fn main() -> anyhow::Result<()> {
         return uninstall::run_uninstall_from_args(&manifest);
     }
 
-    if elevation::is_install_mode() {
-        return run_headless_install(&manifest);
-    }
+    let is_admin = elevation::is_running_as_admin().unwrap_or(false);
+    let resuming_elevated = elevation::is_elevated_install_mode();
 
     let app = InstallerWindow::new().context("failed to create installer window")?;
 
     app.set_product_name(manifest.product.name.clone().into());
     app.set_installer_name(manifest.installer.name.clone().into());
+    app.set_installer_version(format!("v{}", env!("CARGO_PKG_VERSION")).into());
     let default_install_dir =
         install::resolve_install_path(&manifest.install_plan.default_install_dir)
             .unwrap_or_else(|_| PathBuf::from(&manifest.install_plan.default_install_dir));
@@ -54,6 +55,7 @@ fn main() -> anyhow::Result<()> {
     app.set_current_step(state::Step::Welcome.index());
     app.set_progress_percent(0);
     app.set_progress_message("설치 준비 중...".into());
+    app.set_capacity_text(storage::capacity_text(storage::required_bytes(&manifest), None).into());
     app.set_error_code("".into());
     app.set_error_message("".into());
 
@@ -107,58 +109,72 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
-    app.on_continue_clicked({
+    app.on_start_clicked({
         let app = app.as_weak();
         let manifest = Arc::clone(&manifest);
         move || {
             if let Some(app) = app.upgrade() {
-                let current = state::Step::from_index(app.get_current_step());
-
-                if matches!(current, state::Step::InstallPath) {
-                    if manifest.installer.requires_admin_on_install
-                        && !elevation::is_running_as_admin().unwrap_or(false)
-                    {
-                        app.set_progress_message("관리자 권한 요청 중...".into());
-                        match elevation::restart_as_admin_for_install(
-                            &app.get_install_path(),
-                            app.get_create_desktop_shortcut(),
-                            app.get_run_after_install(),
-                        ) {
-                            Ok(()) => {
-                                let _ = app.hide();
-                                slint::quit_event_loop().ok();
-                                return;
-                            }
-                            Err(error) => {
-                                app.set_error_code("ADMIN_REQUIRED".into());
-                                app.set_error_message(error.to_string().into());
-                                app.set_current_step(state::Step::Error.index());
-                                return;
-                            }
-                        }
-                    }
-
-                    app.set_current_step(state::Step::Installing.index());
-                    app.set_progress_percent(0);
-                    app.set_progress_message("설치 준비 중...".into());
-                    app.set_error_code("".into());
-                    app.set_error_message("".into());
-                    start_install(
-                        app.as_weak(),
-                        Arc::clone(&manifest),
-                        app.get_install_path().into(),
-                        app.get_create_desktop_shortcut(),
-                        app.get_run_after_install(),
-                    );
-                    return;
-                }
-
-                if matches!(current, state::Step::Error) {
-                    app.set_current_step(state::Step::InstallPath.index());
-                } else {
-                    app.set_current_step(current.next().index());
-                }
+                app.set_current_step(state::Step::InstallPath.index());
+                refresh_capacity_text(app.as_weak(), Arc::clone(&manifest));
             }
+        }
+    });
+
+    app.on_retry_clicked({
+        let app = app.as_weak();
+        move || {
+            if let Some(app) = app.upgrade() {
+                app.set_error_code("".into());
+                app.set_error_message("".into());
+                app.set_current_step(state::Step::InstallPath.index());
+            }
+        }
+    });
+
+    app.on_install_clicked({
+        let app = app.as_weak();
+        let manifest = Arc::clone(&manifest);
+        move || {
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+
+            // The install writes into Program Files and HKLM, so it needs the
+            // administrator token before any work starts. Instead of handing the
+            // job to a hidden background process, relaunch this same UI elevated
+            // and let it resume straight at the install step.
+            if manifest.installer.requires_admin_on_install && !is_admin {
+                match elevation::restart_as_admin_for_install(
+                    &app.get_install_path(),
+                    app.get_create_desktop_shortcut(),
+                    app.get_run_after_install(),
+                ) {
+                    Ok(()) => {
+                        let _ = app.hide();
+                        slint::quit_event_loop().ok();
+                    }
+                    Err(error) => {
+                        app.set_error_code("ADMIN_REQUIRED".into());
+                        app.set_error_message(error.to_string().into());
+                        app.set_current_step(state::Step::Error.index());
+                    }
+                }
+                return;
+            }
+
+            begin_install(&app, Arc::clone(&manifest));
+        }
+    });
+
+    app.on_launch_clicked({
+        let app = app.as_weak();
+        let title_drag_state = Rc::clone(&title_drag_state);
+        move || {
+            *title_drag_state.borrow_mut() = None;
+            if let Some(app) = app.upgrade() {
+                finish_installer(&app, true, is_admin);
+            }
+            slint::quit_event_loop().ok();
         }
     });
 
@@ -168,14 +184,10 @@ fn main() -> anyhow::Result<()> {
         move || {
             *title_drag_state.borrow_mut() = None;
             if let Some(app) = app.upgrade() {
-                if state::Step::from_index(app.get_current_step()) == state::Step::Complete
-                    && app.get_run_after_install()
-                {
-                    let install_dir = install::resolve_install_path(&app.get_install_path())
-                        .unwrap_or_else(|_| PathBuf::from(app.get_install_path().to_string()));
-                    let _ = install::launch_installed_launcher(&install_dir);
-                }
-                let _ = app.hide();
+                let launch = state::Step::from_index(app.get_current_step())
+                    == state::Step::Complete
+                    && app.get_run_after_install();
+                finish_installer(&app, launch, is_admin);
             }
             slint::quit_event_loop().ok();
         }
@@ -183,6 +195,7 @@ fn main() -> anyhow::Result<()> {
 
     app.on_browse_clicked({
         let app = app.as_weak();
+        let manifest = Arc::clone(&manifest);
         move || {
             if let Some(app) = app.upgrade() {
                 let current_path = install::resolve_install_path(&app.get_install_path())
@@ -190,27 +203,89 @@ fn main() -> anyhow::Result<()> {
 
                 if let Some(path) = dialogs::pick_install_directory(&current_path) {
                     app.set_install_path(path.display().to_string().into());
+                    refresh_capacity_text(app.as_weak(), Arc::clone(&manifest));
                 }
             }
         }
     });
 
+    if resuming_elevated {
+        if let Some(install_dir) = elevation::install_dir_from_args() {
+            app.set_install_path(install_dir.into());
+        }
+        app.set_create_desktop_shortcut(
+            elevation::desktop_shortcut_from_args()
+                .unwrap_or(manifest.installer.default_create_desktop_shortcut),
+        );
+        app.set_run_after_install(
+            elevation::run_after_install_from_args()
+                .unwrap_or(manifest.installer.default_run_after_install),
+        );
+
+        let app_weak = app.as_weak();
+        let manifest = Arc::clone(&manifest);
+        slint::Timer::single_shot(Duration::from_millis(80), move || {
+            if let Some(app) = app_weak.upgrade() {
+                begin_install(&app, Arc::clone(&manifest));
+            }
+        });
+    }
+
     app.run().context("installer window failed")?;
     Ok(())
 }
 
-fn run_headless_install(manifest: &Arc<manifest::Manifest>) -> anyhow::Result<()> {
-    let options = install::InstallOptions {
-        install_dir: install::resolve_install_path(
-            &elevation::install_dir_from_args().context("missing --install-dir")?,
-        )?,
-        create_desktop_shortcut: elevation::desktop_shortcut_from_args().unwrap_or(true),
-        run_after_install: elevation::run_after_install_from_args().unwrap_or(true),
-        launch_after_install: true,
-    };
+fn begin_install(app: &InstallerWindow, manifest: Arc<manifest::Manifest>) {
+    app.set_current_step(state::Step::Installing.index());
+    app.set_progress_percent(0);
+    app.set_progress_message("설치 준비 중...".into());
+    app.set_error_code("".into());
+    app.set_error_message("".into());
+    start_install(
+        app.as_weak(),
+        manifest,
+        app.get_install_path().into(),
+        app.get_create_desktop_shortcut(),
+    );
+}
 
-    install::run_install(manifest, &options, &mut |_| {})?;
-    Ok(())
+/// Apply the choices that stay editable on the complete page, then optionally
+/// hand control over to the freshly installed launcher.
+fn finish_installer(app: &InstallerWindow, launch: bool, is_admin: bool) {
+    if state::Step::from_index(app.get_current_step()) != state::Step::Complete {
+        let _ = app.hide();
+        return;
+    }
+
+    let install_dir = install::resolve_install_path(&app.get_install_path())
+        .unwrap_or_else(|_| PathBuf::from(app.get_install_path().to_string()));
+
+    let _ = shortcuts::apply_desktop_shortcut(&install_dir, app.get_create_desktop_shortcut());
+
+    if launch {
+        let _ = install::launch_installed_launcher(&install_dir, is_admin);
+    }
+
+    let _ = app.hide();
+}
+
+fn refresh_capacity_text(app: slint::Weak<InstallerWindow>, manifest: Arc<manifest::Manifest>) {
+    let Some(strong_app) = app.upgrade() else {
+        return;
+    };
+    let install_path = strong_app.get_install_path().to_string();
+
+    std::thread::spawn(move || {
+        let required = storage::required_bytes(&manifest);
+        let free = storage::free_bytes_for_path(&install_path);
+        let text = storage::capacity_text(required, free);
+
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = app.upgrade() {
+                app.set_capacity_text(text.into());
+            }
+        });
+    });
 }
 
 fn start_install(
@@ -218,15 +293,12 @@ fn start_install(
     manifest: Arc<manifest::Manifest>,
     install_path: String,
     create_desktop_shortcut: bool,
-    run_after_install: bool,
 ) {
     std::thread::spawn(move || {
         let options = install::InstallOptions {
             install_dir: install::resolve_install_path(&install_path)
                 .unwrap_or_else(|_| PathBuf::from(install_path)),
             create_desktop_shortcut,
-            run_after_install,
-            launch_after_install: false,
         };
 
         let result = install::run_install(&manifest, &options, &mut |event| {

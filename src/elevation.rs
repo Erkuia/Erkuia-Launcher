@@ -1,9 +1,17 @@
+use std::path::Path;
+
 use anyhow::{bail, Context};
 
 use crate::powershell;
 
-pub fn is_install_mode() -> bool {
-    std::env::args().any(|arg| arg == "--install")
+/// Set on the elevated child process. The child keeps the full installer UI and
+/// resumes at the install step, so the user never loses the window while the
+/// UAC prompt is answered.
+pub const ELEVATED_INSTALL_FLAG: &str = "--elevated-install";
+pub const UNINSTALL_FLAG: &str = "--uninstall";
+
+pub fn is_elevated_install_mode() -> bool {
+    has_flag(ELEVATED_INSTALL_FLAG)
 }
 
 pub fn install_dir_from_args() -> Option<String> {
@@ -11,19 +19,11 @@ pub fn install_dir_from_args() -> Option<String> {
 }
 
 pub fn desktop_shortcut_from_args() -> Option<bool> {
-    value_after_arg("--desktop-shortcut").and_then(|value| match value.as_str() {
-        "true" => Some(true),
-        "false" => Some(false),
-        _ => None,
-    })
+    bool_after_arg("--desktop-shortcut")
 }
 
 pub fn run_after_install_from_args() -> Option<bool> {
-    value_after_arg("--run-after-install").and_then(|value| match value.as_str() {
-        "true" => Some(true),
-        "false" => Some(false),
-        _ => None,
-    })
+    bool_after_arg("--run-after-install")
 }
 
 pub fn is_running_as_admin() -> anyhow::Result<bool> {
@@ -47,47 +47,61 @@ pub fn restart_as_admin_for_install(
     create_desktop_shortcut: bool,
     run_after_install: bool,
 ) -> anyhow::Result<()> {
+    let args = vec![
+        ELEVATED_INSTALL_FLAG.to_string(),
+        "--install-dir".to_string(),
+        install_dir.to_string(),
+        "--desktop-shortcut".to_string(),
+        create_desktop_shortcut.to_string(),
+        "--run-after-install".to_string(),
+        run_after_install.to_string(),
+    ];
+
+    start_elevated(&args)
+}
+
+pub fn restart_as_admin_for_uninstall(install_dir: &Path) -> anyhow::Result<()> {
+    let args = vec![
+        UNINSTALL_FLAG.to_string(),
+        "--install-dir".to_string(),
+        install_dir.display().to_string(),
+    ];
+
+    start_elevated(&args)
+}
+
+/// Re-launch this executable through `Start-Process -Verb RunAs`, which is what
+/// raises the UAC prompt. `-WindowStyle Hidden` is deliberately not used: the
+/// elevated process owns the installer window from here on.
+fn start_elevated(args: &[String]) -> anyhow::Result<()> {
     let exe = std::env::current_exe().context("failed to resolve current executable")?;
-    let args = format!(
-        "--install --install-dir \"{}\" --desktop-shortcut {} --run-after-install {}",
-        powershell::escape_double_quoted(install_dir),
-        create_desktop_shortcut,
-        run_after_install
-    );
+    let argument_list = powershell::join_command_line_args(args);
     let script = format!(
-        "Start-Process -FilePath \"{}\" -ArgumentList '{}' -Verb RunAs -WindowStyle Hidden",
-        powershell::escape_double_quoted(&exe.display().to_string()),
-        powershell::escape_single_quoted(&args)
+        "$ErrorActionPreference = 'Stop'; try {{ Start-Process -FilePath '{}' -ArgumentList '{}' -Verb RunAs; exit 0 }} catch {{ exit 1 }}",
+        powershell::escape_single_quoted(&exe.display().to_string()),
+        powershell::escape_single_quoted(&argument_list)
     );
+
     let output = powershell::output(&["-NoProfile", "-NonInteractive", "-Command", &script])
         .context("failed to request administrator permission")?;
 
     if !output.status.success() {
-        bail!("administrator permission request was not completed");
+        bail!("관리자 권한 요청이 취소되었거나 완료되지 않았어요. 다시 시도해 주세요.");
     }
 
     Ok(())
 }
 
-pub fn restart_as_admin_for_uninstall(install_dir: &std::path::Path) -> anyhow::Result<()> {
-    let exe = std::env::current_exe().context("failed to resolve current executable")?;
-    let args = format!(
-        "--uninstall --install-dir \"{}\"",
-        powershell::escape_double_quoted(&install_dir.display().to_string())
-    );
-    let script = format!(
-        "Start-Process -FilePath \"{}\" -ArgumentList '{}' -Verb RunAs -WindowStyle Hidden",
-        powershell::escape_double_quoted(&exe.display().to_string()),
-        powershell::escape_single_quoted(&args)
-    );
-    let output = powershell::output(&["-NoProfile", "-NonInteractive", "-Command", &script])
-        .context("failed to request administrator permission")?;
+fn has_flag(name: &str) -> bool {
+    std::env::args().skip(1).any(|arg| arg == name)
+}
 
-    if !output.status.success() {
-        bail!("administrator permission request was not completed");
-    }
-
-    Ok(())
+fn bool_after_arg(name: &str) -> Option<bool> {
+    value_after_arg(name).and_then(|value| match value.as_str() {
+        "true" => Some(true),
+        "false" => Some(false),
+        _ => None,
+    })
 }
 
 fn value_after_arg(name: &str) -> Option<String> {

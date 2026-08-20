@@ -67,7 +67,6 @@ pub fn download_ready_components(
         });
 
         downloaded.push(DownloadedComponent {
-            id: component.id.clone(),
             file_path,
             target_path: PathBuf::from(&component.target_path),
         });
@@ -202,7 +201,6 @@ fn cache_file_path(cache_dir: &Path, file_name: &str) -> anyhow::Result<PathBuf>
 
 #[derive(Debug)]
 pub struct DownloadedComponent {
-    pub id: String,
     pub file_path: PathBuf,
     pub target_path: PathBuf,
 }

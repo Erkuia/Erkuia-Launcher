@@ -17,8 +17,6 @@ type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 pub struct InstallOptions {
     pub install_dir: PathBuf,
     pub create_desktop_shortcut: bool,
-    pub run_after_install: bool,
-    pub launch_after_install: bool,
 }
 
 pub fn run_install(
@@ -67,15 +65,10 @@ pub fn run_install(
     uninstall::register_uninstaller(manifest, &options.install_dir, emit)
         .context("failed to register uninstaller")?;
 
-    if options.launch_after_install {
-        maybe_launch_after_install(&options.install_dir, options.run_after_install, emit)
-            .context("failed to launch installed launcher")?;
-    }
-
     emit(InstallEvent::Progress {
         stage: InstallStage::Finalize,
         local_percent: 100.0,
-        message: "설치 완료".to_string(),
+        message: "설치 완료 중...".to_string(),
     });
     emit(InstallEvent::Completed {
         install_dir: options.install_dir.display().to_string(),
@@ -129,37 +122,19 @@ fn trim_path_separator(path: &str) -> &str {
     path.trim_start_matches(['\\', '/'])
 }
 
-fn maybe_launch_after_install(
-    install_dir: &Path,
-    run_after_install: bool,
-    emit: EventSink<'_>,
-) -> anyhow::Result<()> {
-    if !run_after_install {
-        return Ok(());
-    }
-
-    let launcher_path = install_dir.join("RendogLauncher.exe");
-    if !launcher_path.exists() {
-        emit(InstallEvent::Progress {
-            stage: InstallStage::Finalize,
-            local_percent: 50.0,
-            message: "런처 파일이 아직 준비되지 않아 자동 실행을 건너뛰었어요.".to_string(),
-        });
-        return Ok(());
-    }
-
-    Command::new(&launcher_path)
-        .current_dir(install_dir)
-        .spawn()
-        .with_context(|| format!("failed to launch {}", launcher_path.display()))?;
-
-    Ok(())
-}
-
-pub fn launch_installed_launcher(install_dir: &Path) -> anyhow::Result<bool> {
+/// Start the installed launcher.
+///
+/// When the installer itself is elevated, spawning the launcher directly would
+/// hand it the administrator token as well. Going through `explorer.exe` makes
+/// the shell start it at the logged-on user's normal integrity level instead.
+pub fn launch_installed_launcher(install_dir: &Path, drop_elevation: bool) -> anyhow::Result<bool> {
     let launcher_path = install_dir.join("RendogLauncher.exe");
     if !launcher_path.exists() {
         return Ok(false);
+    }
+
+    if drop_elevation && launch_through_shell(&launcher_path).is_ok() {
+        return Ok(true);
     }
 
     Command::new(&launcher_path)
@@ -168,4 +143,13 @@ pub fn launch_installed_launcher(install_dir: &Path) -> anyhow::Result<bool> {
         .with_context(|| format!("failed to launch {}", launcher_path.display()))?;
 
     Ok(true)
+}
+
+fn launch_through_shell(launcher_path: &Path) -> anyhow::Result<()> {
+    Command::new("explorer.exe")
+        .arg(launcher_path)
+        .spawn()
+        .with_context(|| format!("failed to shell-launch {}", launcher_path.display()))?;
+
+    Ok(())
 }

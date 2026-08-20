@@ -9,6 +9,10 @@ use crate::{
 
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
+const SHORTCUT_FILE_NAME: &str = "Rendog Launcher.lnk";
+const START_MENU_FOLDER_NAME: &str = "Rendog Launcher";
+const FINALIZE_MESSAGE: &str = "설치 완료 중...";
+
 pub fn create_launcher_shortcuts(
     install_dir: &Path,
     create_desktop_shortcut: bool,
@@ -17,7 +21,7 @@ pub fn create_launcher_shortcuts(
     emit(InstallEvent::Progress {
         stage: InstallStage::Shortcuts,
         local_percent: 0.0,
-        message: "바로가기 생성 준비 중...".to_string(),
+        message: FINALIZE_MESSAGE.to_string(),
     });
 
     let launcher_path = install_dir.join("RendogLauncher.exe");
@@ -30,19 +34,16 @@ pub fn create_launcher_shortcuts(
         return Ok(());
     }
 
-    if create_desktop_shortcut {
-        let desktop_shortcut = known_folder_path("Desktop")?.join("Rendog Launcher.lnk");
-        create_shortcut(&desktop_shortcut, &launcher_path, install_dir)
-            .context("failed to create desktop shortcut")?;
-    }
+    apply_desktop_shortcut(install_dir, create_desktop_shortcut)
+        .context("failed to apply desktop shortcut")?;
 
     emit(InstallEvent::Progress {
         stage: InstallStage::Shortcuts,
         local_percent: 50.0,
-        message: "시작 메뉴 바로가기 생성 중...".to_string(),
+        message: FINALIZE_MESSAGE.to_string(),
     });
 
-    let start_menu_dir = known_folder_path("Programs")?.join("Rendog Launcher");
+    let start_menu_dir = known_folder_path("Programs")?.join(START_MENU_FOLDER_NAME);
     std::fs::create_dir_all(&start_menu_dir).with_context(|| {
         format!(
             "failed to create start menu directory {}",
@@ -50,7 +51,7 @@ pub fn create_launcher_shortcuts(
         )
     })?;
     create_shortcut(
-        &start_menu_dir.join("Rendog Launcher.lnk"),
+        &start_menu_dir.join(SHORTCUT_FILE_NAME),
         &launcher_path,
         install_dir,
     )
@@ -59,15 +60,39 @@ pub fn create_launcher_shortcuts(
     emit(InstallEvent::Progress {
         stage: InstallStage::Shortcuts,
         local_percent: 100.0,
-        message: "바로가기 생성 완료".to_string(),
+        message: FINALIZE_MESSAGE.to_string(),
     });
 
     Ok(())
 }
 
+/// Create or remove the desktop shortcut so it matches `enabled`. The complete
+/// page keeps this option editable after the install finished, so this has to
+/// stay idempotent in both directions.
+pub fn apply_desktop_shortcut(install_dir: &Path, enabled: bool) -> anyhow::Result<()> {
+    let desktop_shortcut = known_folder_path("Desktop")?.join(SHORTCUT_FILE_NAME);
+
+    if !enabled {
+        if desktop_shortcut.exists() {
+            std::fs::remove_file(&desktop_shortcut).with_context(|| {
+                format!("failed to remove {}", desktop_shortcut.display())
+            })?;
+        }
+        return Ok(());
+    }
+
+    let launcher_path = install_dir.join("RendogLauncher.exe");
+    if !launcher_path.exists() {
+        return Ok(());
+    }
+
+    create_shortcut(&desktop_shortcut, &launcher_path, install_dir)
+        .context("failed to create desktop shortcut")
+}
+
 fn known_folder_path(shell_folder_name: &str) -> anyhow::Result<PathBuf> {
     let script = format!(
-        "$w = New-Object -ComObject WScript.Shell; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Write-Output $w.SpecialFolders('{}')",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $w = New-Object -ComObject WScript.Shell; Write-Output $w.SpecialFolders('{}')",
         powershell::escape_single_quoted(shell_folder_name)
     );
     let output = powershell::output(&["-NoProfile", "-NonInteractive", "-Command", &script])

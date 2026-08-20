@@ -36,7 +36,7 @@ pub fn install_downloaded_components(
         emit(InstallEvent::Progress {
             stage: InstallStage::InstallFiles,
             local_percent: percent(installed_before, total_size),
-            message: format!("{} 설치 중...", component.id),
+            message: "파일 배치 중...".to_string(),
         });
 
         let copied =
@@ -49,7 +49,7 @@ pub fn install_downloaded_components(
     emit(InstallEvent::Progress {
         stage: InstallStage::InstallFiles,
         local_percent: 100.0,
-        message: "파일 설치 완료".to_string(),
+        message: "파일 배치 중...".to_string(),
     });
 
     Ok(installed)
@@ -85,7 +85,7 @@ fn copy_with_progress(
         emit(InstallEvent::Progress {
             stage: InstallStage::InstallFiles,
             local_percent: percent(installed_before + copied, total_size),
-            message: format!("{} 설치 중...", component.id),
+            message: "파일 배치 중...".to_string(),
         });
     }
 

@@ -20,14 +20,18 @@ Custom online installer for Rendog Launcher.
 
 ## Installer Behavior
 
-- Requires administrator permission when installation starts.
+- Requires administrator permission when installation starts, by relaunching the
+  same installer window elevated instead of handing the work to a hidden process.
 - Uses `installer/manifest.json` as the installation manifest.
 - Downloads only components marked as `ready`.
 - Leaves pending components out of the download flow.
 - Shows real-time progress from actual download, verification, and file copy work.
-- Defaults `run after install` to checked.
-- Defaults `create desktop shortcut` to checked.
-- Creates desktop and start menu shortcuts when `RendogLauncher.exe` is available.
+- Shows `create desktop shortcut` and `run launcher after the wizard closes` on the
+  complete screen, both checked by default.
+- Creates desktop and start menu shortcuts when `RendogLauncher.exe` is available,
+  and reconciles the desktop shortcut again when the complete screen is closed.
+- Starts the installed launcher through the shell so it does not inherit the
+  installer's administrator token.
 - Registers a Windows uninstaller entry under HKLM.
 - Re-runs the uninstaller with administrator permission when needed.
 - Skips launch and shortcut creation gracefully while `RendogLauncher.exe` is pending.
@@ -53,16 +57,19 @@ Custom online installer for Rendog Launcher.
 - Download: `5-50%`
 - Verify: `50-65%`
 - Install files: `65-88%`
-- Shortcuts: `88-94%`
-- Register uninstaller: `94-98%`
-- Finalize: `98-100%`
+- Shortcuts: `88-94%` (shown as `설치 완료 중...`)
+- Register uninstaller: `94-98%` (shown as `설치 완료 중...`)
+- Finalize: `98-100%` (shown as `설치 완료 중...`)
 
 ## Installer Flow
 
 ```text
 Start screen
+  -> press the start button
   -> select install path
-  -> start install with administrator permission
+  -> press the install button
+  -> request administrator permission (UAC)
+  -> relaunch this window elevated and resume at the install step
   -> prepare install directory and cache
   -> download ready components
   -> verify downloaded files
@@ -70,6 +77,7 @@ Start screen
   -> create desktop/start menu shortcuts
   -> register uninstaller
   -> complete screen
+  -> apply the desktop shortcut option
   -> run RendogLauncher.exe when checked
 ```
 
@@ -77,7 +85,8 @@ Start screen
 
 ```text
 UI install button
-  -> request administrator permission at install start
+  -> elevation::restart_as_admin_for_install() when not elevated yet
+  -> elevated process starts with --elevated-install and the chosen options
   -> background install thread
   -> run_install()
   -> download_ready_components()
@@ -87,6 +96,7 @@ UI install button
   -> register Windows uninstaller
   -> InstallEvent::Progress updates Slint UI
   -> InstallEvent::Completed opens the complete screen
+  -> shortcuts::apply_desktop_shortcut() on close
   -> launch installed launcher when checked and available
 ```
 

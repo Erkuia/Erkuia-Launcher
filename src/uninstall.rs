@@ -22,14 +22,15 @@ pub fn register_uninstaller(
     emit(InstallEvent::Progress {
         stage: InstallStage::RegisterUninstaller,
         local_percent: 0.0,
-        message: "제거 프로그램 등록 중...".to_string(),
+        message: "설치 완료 중...".to_string(),
     });
 
     let installer_path = copy_uninstaller_to_install_dir(install_dir)?;
     let uninstall_command = format!(
-        "\"{}\" --uninstall --install-dir \"{}\"",
-        installer_path.display(),
-        install_dir.display()
+        "{} {} --install-dir {}",
+        powershell::quote_command_line_arg(&installer_path.display().to_string()),
+        elevation::UNINSTALL_FLAG,
+        powershell::quote_command_line_arg(&install_dir.display().to_string())
     );
 
     let script = format!(
@@ -60,14 +61,16 @@ pub fn register_uninstaller(
     emit(InstallEvent::Progress {
         stage: InstallStage::RegisterUninstaller,
         local_percent: 100.0,
-        message: "제거 프로그램 등록 완료".to_string(),
+        message: "설치 완료 중...".to_string(),
     });
 
     Ok(())
 }
 
 pub fn is_uninstall_mode() -> bool {
-    std::env::args().any(|arg| arg == "--uninstall")
+    std::env::args()
+        .skip(1)
+        .any(|arg| arg == elevation::UNINSTALL_FLAG)
 }
 
 pub fn run_uninstall_from_args(manifest: &Manifest) -> anyhow::Result<()> {

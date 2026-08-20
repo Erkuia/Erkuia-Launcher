@@ -27,14 +27,4 @@ impl Step {
             _ => Self::Welcome,
         }
     }
-
-    pub fn next(self) -> Self {
-        match self {
-            Self::Welcome => Self::InstallPath,
-            Self::InstallPath => Self::Installing,
-            Self::Installing => Self::Complete,
-            Self::Complete => Self::Complete,
-            Self::Error => Self::InstallPath,
-        }
-    }
 }
