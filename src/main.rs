@@ -5,6 +5,7 @@ use std::{cell::RefCell, rc::Rc, time::Duration};
 use anyhow::Context;
 use slint::{PhysicalPosition, TimerMode};
 
+mod auth;
 mod config;
 mod error;
 mod http;
