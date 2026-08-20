@@ -162,14 +162,31 @@ verificationUri + "?otc=" + userCode
 | --- | --- | --- |
 | L4-1 | Device Code 발급 | user code / verification URI 획득, 기본 브라우저 열기 |
 | L4-2 | 토큰 폴링 | `interval` 준수, `authorization_pending`/`expired_token`/`authorization_declined` 구분, 취소 지원 |
-| L4-3 | Xbox Live 인증 | `RpsTicket` 교환 → XBL 토큰 |
-| L4-4 | XSTS 인증 | `uhs` 추출, 오류코드 안내 (`2148916233` 계정 없음 / `2148916238` 미성년자) |
-| L4-5 | Minecraft 로그인 | `login_with_xbox` 교환 + 게임 소유 확인 |
-| L4-6 | 프로필 조회 | UUID, 닉네임, 스킨 URL |
-| L4-6b | 스킨 헤드 아바타 | 스킨 PNG(64×64)에서 얼굴 `(8,8)-(16,16)`과 모자 레이어 `(40,8)-(48,16)`를 합성해 8×8 헤드 생성 → 캐시. 로드 전에는 이니셜 표시 |
-| L4-7 | 계정 저장소 | **여러 계정** 리프레시 토큰을 DPAPI로 암호화 저장, 현재 계정 선택 상태 |
-| L4-8 | 토큰 자동 갱신 | meteor `getUpToDate()`처럼 체인 단계별 만료 시 갱신 |
-| L4-9 | UI 연결 | 드롭다운 로그인/계정 추가/계정 전환/로그아웃 (L2-3 바인딩) |
+| L4-3 | Xbox 요청 서명 | ECDSA P-256 키쌍, `ProofKey`(JWK), `Signature` 헤더 (`SignedXblPostRequest` 이식) |
+| L4-4 | 디바이스 토큰 | `device.auth.xboxlive.com/device/authenticate`, `AuthMethod: ProofOfPossession` |
+| L4-5 | SISU 인증 | `sisu.xboxlive.com/authorize` → UserToken / TitleToken / AuthorizationToken(XSTS). XErr 안내 (`2148916233` 계정 없음 / `2148916238` 미성년자) |
+| L4-6 | Minecraft 로그인 | `login_with_xbox` 교환 + 게임 소유 확인 |
+| L4-7 | 프로필 조회 | UUID, 닉네임, 스킨 URL |
+| L4-7b | 스킨 헤드 아바타 | 스킨 PNG(64×64)에서 얼굴 `(8,8)-(16,16)`과 모자 레이어 `(40,8)-(48,16)`를 합성해 8×8 헤드 생성 → 캐시. 로드 전에는 이니셜 표시 |
+| L4-8 | 계정 저장소 | **여러 계정** 리프레시 토큰 + 디바이스 키쌍/ID를 DPAPI로 암호화 저장 |
+| L4-9 | 토큰 자동 갱신 | meteor `getUpToDate()`처럼 체인 단계별 만료 시 갱신 |
+| L4-10 | UI 연결 | 드롭다운 로그인/계정 추가/계정 전환/로그아웃 (L2-3 바인딩) |
+
+> **title client id는 SISU 경로를 씁니다.** `JavaAuthManager.refreshJavaXstsToken()` 이
+> `isTitleClientId()` 로 분기하며, title 이면 `user/authenticate` + `xsts/authorize` 대신
+> `sisu.xboxlive.com/authorize` 를 호출합니다. SISU 는 디바이스 토큰과 ECDSA P-256 으로
+> 서명된 요청을 요구합니다. 단순 경로는 Azure 앱 등록을 한 경우에만 해당합니다.
+
+### Xbox 요청 서명 형식
+
+`SignedXblPostRequest.appendSignatureHeader()` 를 그대로 옮깁니다.
+
+```text
+서명 대상 = i32be(1) ‖ 00 ‖ i64be(windowsTs) ‖ 00 ‖ METHOD ‖ 00
+           ‖ path+query ‖ 00 ‖ Authorization ‖ 00 ‖ body ‖ 00
+Signature = base64( i32be(1) ‖ i64be(windowsTs) ‖ ECDSA-P256-SHA256 r‖s 64B )
+windowsTs = (unix초 + 11644473600) × 10^7
+```
 
 ### Rust 크레이트 후보
 
