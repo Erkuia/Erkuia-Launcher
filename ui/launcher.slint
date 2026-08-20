@@ -11,6 +11,9 @@ export component LauncherWindow inherits Window {
     in-out property <string> launcher-version: "v0.1.0";
     in-out property <string> server-address: "rendog.kr";
     in-out property <string> minecraft-version: "1.20.4";
+    // Shown read-only as "프로그램 디렉토리" in the settings modal (L2-4).
+    in-out property <string> program-directory: "";
+    in-out property <string> data-directory: "";
 
     title: root.product-name;
     width: 1000px;
@@ -38,6 +41,22 @@ export component LauncherWindow inherits Window {
 
         Text {
             text: root.launcher-version;
+            color: #83868a;
+            font-size: 11px;
+            horizontal-alignment: center;
+        }
+
+        // Scaffolding only: confirms the resolved layout at a glance until the
+        // settings modal (L2-4) gives these a real home.
+        Text {
+            text: "프로그램 " + root.program-directory;
+            color: #83868a;
+            font-size: 11px;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: "데이터 " + root.data-directory;
             color: #83868a;
             font-size: 11px;
             horizontal-alignment: center;
