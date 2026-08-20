@@ -13,24 +13,34 @@ export component ModalOverlay inherits Rectangle {
         }
     }
 
-    Rectangle {
-        width: Theme.modal-width;
-        height: Theme.modal-height;
-        border-radius: Theme.radius-modal;
-        background: Theme.raised;
-        drop-shadow-blur: Theme.shadow-modal-blur;
-        drop-shadow-offset-y: Theme.shadow-modal-offset-y;
-        drop-shadow-color: Theme.shadow-modal-color;
+    VerticalLayout {
+        width: 100%;
+        height: 100%;
+        alignment: center;
 
-        TouchArea { }
+        HorizontalLayout {
+            alignment: center;
 
-        VerticalLayout {
-            padding-left: Theme.modal-pad-x;
-            padding-right: Theme.modal-pad-x;
-            padding-top: Theme.modal-pad-top;
-            padding-bottom: Theme.modal-pad-bottom;
+            Rectangle {
+                width: Theme.modal-width;
+                height: Theme.modal-height;
+                border-radius: Theme.radius-modal;
+                background: Theme.raised;
+                drop-shadow-blur: Theme.shadow-modal-blur;
+                drop-shadow-offset-y: Theme.shadow-modal-offset-y;
+                drop-shadow-color: Theme.shadow-modal-color;
 
-            @children
+                TouchArea { }
+
+                VerticalLayout {
+                    padding-left: Theme.modal-pad-x;
+                    padding-right: Theme.modal-pad-x;
+                    padding-top: Theme.modal-pad-top;
+                    padding-bottom: Theme.modal-pad-bottom;
+
+                    @children
+                }
+            }
         }
     }
 }
@@ -50,24 +60,28 @@ export component Popover inherits Rectangle {
         }
     }
 
-    Rectangle {
+    VerticalLayout {
         x: root.anchor-x;
         y: root.anchor-y;
         width: Theme.popover-width;
-        border-radius: Theme.radius-popover;
-        border-width: 1px;
-        border-color: Theme.frame-border;
-        background: Theme.raised;
-        drop-shadow-blur: Theme.shadow-popover-blur;
-        drop-shadow-offset-y: Theme.shadow-popover-offset-y;
-        drop-shadow-color: Theme.shadow-popover-color;
+        alignment: start;
 
-        TouchArea { }
+        Rectangle {
+            border-radius: Theme.radius-popover;
+            border-width: 1px;
+            border-color: Theme.frame-border;
+            background: Theme.raised;
+            drop-shadow-blur: Theme.shadow-popover-blur;
+            drop-shadow-offset-y: Theme.shadow-popover-offset-y;
+            drop-shadow-color: Theme.shadow-popover-color;
 
-        VerticalLayout {
-            padding: Theme.popover-pad;
+            TouchArea { }
 
-            @children
+            VerticalLayout {
+                padding: Theme.popover-pad;
+
+                @children
+            }
         }
     }
 }
