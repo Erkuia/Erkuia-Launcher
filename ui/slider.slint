@@ -57,7 +57,7 @@ export component ValueSlider inherits Rectangle {
         y: Theme.slider-track-top;
         width: root.width;
         height: Theme.slider-track;
-        border-radius: Theme.radius-pill;
+        border-radius: Theme.radius-track;
         background: Theme.control;
 
         Rectangle {
@@ -65,7 +65,7 @@ export component ValueSlider inherits Rectangle {
             y: 0px;
             width: parent.width * root.fraction;
             height: parent.height;
-            border-radius: Theme.radius-pill;
+            border-radius: Theme.radius-track;
             background: Theme.accent;
         }
     }
@@ -75,7 +75,7 @@ export component ValueSlider inherits Rectangle {
         y: Theme.slider-track-top + (Theme.slider-track - Theme.slider-thumb) / 2;
         width: Theme.slider-thumb;
         height: Theme.slider-thumb;
-        border-radius: Theme.radius-pill;
+        border-radius: Theme.radius-thumb;
         border-width: Theme.slider-thumb-border;
         border-color: Theme.accent;
         background: Theme.raised;

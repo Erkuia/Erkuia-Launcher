@@ -183,7 +183,7 @@ export component Toggle inherits Rectangle {
 
     width: Theme.toggle-width;
     height: Theme.toggle-height;
-    border-radius: Theme.radius-pill;
+    border-radius: Theme.radius-toggle;
     opacity: root.enabled ? 1.0 : 0.5;
     background: root.checked
         ? (touch.pressed ? Theme.accent-pressed : Theme.accent)
@@ -196,7 +196,7 @@ export component Toggle inherits Rectangle {
         y: 3px;
         width: Theme.toggle-knob;
         height: Theme.toggle-knob;
-        border-radius: Theme.radius-pill;
+        border-radius: Theme.radius-toggle-knob;
         background: Theme.raised;
         drop-shadow-blur: Theme.shadow-knob-blur;
         drop-shadow-offset-y: Theme.shadow-knob-offset-y;
@@ -218,7 +218,7 @@ export component Toggle inherits Rectangle {
 export component Badge inherits Rectangle {
     in property <string> text;
 
-    border-radius: Theme.radius-pill;
+    border-radius: Theme.radius-badge;
     background: Theme.badge;
     horizontal-stretch: 0;
 
@@ -236,6 +236,19 @@ export component Badge inherits Rectangle {
             vertical-alignment: center;
         }
     }
+}
+
+export component ChevronDown inherits Path {
+    in property <brush> color;
+
+    width: 7px;
+    height: 4px;
+    viewbox-x: 0;
+    viewbox-y: 0;
+    viewbox-width: 7;
+    viewbox-height: 4;
+    commands: "M 0 0 L 7 0 L 3.5 4 Z";
+    fill: root.color;
 }
 
 export component Divider inherits Rectangle {

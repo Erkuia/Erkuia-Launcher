@@ -1,5 +1,5 @@
 import { Theme, Typo } from "theme.slint";
-import { AccentButton, Divider } from "controls.slint";
+import { AccentButton, Divider, ChevronDown } from "controls.slint";
 
 export struct Account {
     id: string,
@@ -49,7 +49,7 @@ export component ProfileChip inherits Rectangle {
     in property <image> avatar;
     callback clicked();
 
-    border-radius: Theme.radius-pill;
+    border-radius: Theme.radius-chip;
     border-width: 1px;
     border-color: Theme.frame-border;
     background: touch.pressed
@@ -88,11 +88,8 @@ export component ProfileChip inherits Rectangle {
             padding-bottom: 1px;
             alignment: center;
 
-            Text {
-                text: "▾";
+            ChevronDown {
                 color: Theme.tick;
-                font-size: Typo.chevron;
-                vertical-alignment: center;
             }
         }
     }
