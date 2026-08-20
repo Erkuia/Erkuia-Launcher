@@ -34,6 +34,8 @@ pub struct Config {
     #[serde(default = "default_adaptive_rendering")]
     pub adaptive_rendering: bool,
     #[serde(default)]
+    pub managed_mods: Vec<String>,
+    #[serde(default)]
     pub accounts: Vec<AccountRecord>,
     #[serde(default)]
     pub selected_account: Option<String>,
@@ -52,6 +54,7 @@ impl Default for Config {
         Self {
             target_fps: default_fps(),
             adaptive_rendering: default_adaptive_rendering(),
+            managed_mods: Vec::new(),
             accounts: Vec::new(),
             selected_account: None,
         }

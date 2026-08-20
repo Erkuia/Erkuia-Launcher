@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 
-use crate::manifest::Manifest;
+use crate::{hash::Checksum, manifest::Manifest, mc::version::DownloadTarget};
+
+pub const MODS_RELATIVE: &str = "mods";
 
 pub const JAR_EXTENSION: &str = "jar";
 
@@ -168,6 +170,81 @@ pub fn path_of(mods_dir: &Path, disabled_dir: &Path, entry: &ModInfo) -> PathBuf
     let root = if entry.enabled { mods_dir } else { disabled_dir };
 
     root.join(&entry.file_name)
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RequiredSync {
+    pub targets: Vec<DownloadTarget>,
+    pub restored: Vec<String>,
+    pub removed: Vec<String>,
+}
+
+pub fn required_file_names(manifest: &Manifest) -> Vec<String> {
+    manifest
+        .required_mods()
+        .into_iter()
+        .map(|artifact| artifact.file_name.clone())
+        .collect()
+}
+
+pub fn required_targets(manifest: &Manifest) -> Vec<DownloadTarget> {
+    manifest
+        .required_mods()
+        .into_iter()
+        .map(|artifact| DownloadTarget {
+            url: artifact.url.clone(),
+            relative_path: format!("{MODS_RELATIVE}/{}", artifact.file_name),
+            checksum: Some(Checksum::Sha256(artifact.sha256.clone())),
+            size: artifact.size,
+            name: Some(artifact.id.clone()),
+        })
+        .collect()
+}
+
+pub fn prepare_required(
+    mods_dir: &Path,
+    disabled_dir: &Path,
+    manifest: &Manifest,
+    managed: &[String],
+) -> anyhow::Result<RequiredSync> {
+    ensure_dirs(mods_dir, disabled_dir)?;
+
+    let wanted = required_file_names(manifest);
+    let mut sync = RequiredSync {
+        targets: required_targets(manifest),
+        ..RequiredSync::default()
+    };
+
+    for file_name in &wanted {
+        let parked = disabled_dir.join(file_name);
+        let active = mods_dir.join(file_name);
+
+        if parked.is_file() && !active.exists() {
+            std::fs::rename(&parked, &active).with_context(|| {
+                format!("{file_name} 을(를) 다시 활성화하지 못했어요.")
+            })?;
+            sync.restored.push(file_name.clone());
+        } else if parked.is_file() {
+            std::fs::remove_file(&parked).ok();
+        }
+    }
+
+    for file_name in managed {
+        if wanted.iter().any(|name| name == file_name) {
+            continue;
+        }
+
+        for dir in [mods_dir, disabled_dir] {
+            let path = dir.join(file_name);
+            if path.is_file() {
+                std::fs::remove_file(&path)
+                    .with_context(|| format!("{file_name} 을(를) 정리하지 못했어요."))?;
+                sync.removed.push(file_name.clone());
+            }
+        }
+    }
+
+    Ok(sync)
 }
 
 pub fn ensure_dirs(mods_dir: &Path, disabled_dir: &Path) -> anyhow::Result<()> {
@@ -391,6 +468,96 @@ mod tests {
         let root = std::env::temp_dir().join(format!("rendog-mods-none-{}", std::process::id()));
 
         assert!(scan(&root.join("mods"), &root.join("mods-disabled"), None).is_empty());
+    }
+
+    #[test]
+    fn required_targets_carry_the_manifest_hash_and_land_in_mods() {
+        let targets = required_targets(&manifest());
+
+        assert_eq!(targets.len(), 1);
+        assert_eq!(targets[0].relative_path, "mods/RendogClient-Delta.jar");
+        assert_eq!(
+            targets[0].checksum,
+            Some(Checksum::Sha256(
+                "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a".to_string()
+            ))
+        );
+        assert_eq!(targets[0].size, 8_709_016);
+    }
+
+    #[test]
+    fn a_parked_required_mod_is_moved_back_into_mods() {
+        let fixture = Fixture::new("restore");
+        fixture.put("mods-disabled", "RendogClient-Delta.jar");
+
+        let sync =
+            prepare_required(&fixture.mods(), &fixture.disabled(), &manifest(), &[]).unwrap();
+
+        assert_eq!(sync.restored, vec!["RendogClient-Delta.jar"]);
+        assert!(fixture.mods().join("RendogClient-Delta.jar").is_file());
+        assert!(!fixture.disabled().join("RendogClient-Delta.jar").exists());
+    }
+
+    #[test]
+    fn a_duplicate_parked_copy_is_dropped() {
+        let fixture = Fixture::new("dup");
+        fixture.put("mods", "RendogClient-Delta.jar");
+        fixture.put("mods-disabled", "RendogClient-Delta.jar");
+
+        let sync =
+            prepare_required(&fixture.mods(), &fixture.disabled(), &manifest(), &[]).unwrap();
+
+        assert!(sync.restored.is_empty());
+        assert!(fixture.mods().join("RendogClient-Delta.jar").is_file());
+        assert!(!fixture.disabled().join("RendogClient-Delta.jar").exists());
+    }
+
+    #[test]
+    fn a_managed_mod_dropped_from_the_manifest_is_removed() {
+        let fixture = Fixture::new("stale");
+        fixture.put("mods", "RendogClient-Charlie.jar");
+        fixture.put("mods", "RendogClient-Delta.jar");
+
+        let managed = vec!["RendogClient-Charlie.jar".to_string()];
+        let sync =
+            prepare_required(&fixture.mods(), &fixture.disabled(), &manifest(), &managed).unwrap();
+
+        assert_eq!(sync.removed, vec!["RendogClient-Charlie.jar"]);
+        assert!(!fixture.mods().join("RendogClient-Charlie.jar").exists());
+        assert!(fixture.mods().join("RendogClient-Delta.jar").is_file());
+    }
+
+    #[test]
+    fn a_user_added_mod_is_never_removed() {
+        let fixture = Fixture::new("keep");
+        fixture.put("mods", "my-favourite.jar");
+
+        let sync =
+            prepare_required(&fixture.mods(), &fixture.disabled(), &manifest(), &[]).unwrap();
+
+        assert!(sync.removed.is_empty());
+        assert!(fixture.mods().join("my-favourite.jar").is_file());
+    }
+
+    #[test]
+    fn a_mod_still_required_is_not_treated_as_stale() {
+        let fixture = Fixture::new("current");
+        fixture.put("mods", "RendogClient-Delta.jar");
+
+        let managed = vec!["RendogClient-Delta.jar".to_string()];
+        let sync =
+            prepare_required(&fixture.mods(), &fixture.disabled(), &manifest(), &managed).unwrap();
+
+        assert!(sync.removed.is_empty());
+        assert!(fixture.mods().join("RendogClient-Delta.jar").is_file());
+    }
+
+    #[test]
+    fn the_managed_list_comes_from_the_manifest() {
+        assert_eq!(
+            required_file_names(&manifest()),
+            vec!["RendogClient-Delta.jar"]
+        );
     }
 
     #[test]
