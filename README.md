@@ -26,6 +26,11 @@ Custom online installer for Rendog Launcher.
 - Downloads only components marked as `ready`.
 - Leaves pending components out of the download flow.
 - Shows real-time progress from actual download, verification, and file copy work.
+- Keeps the window at its current screen position across the UAC relaunch.
+- Offers a back button on the install path screen and a single close button on the
+  complete screen.
+- Draws the completion/checkbox check marks as vector paths, so they do not depend
+  on a font that happens to carry U+2713.
 - Shows `create desktop shortcut` and `run launcher after the wizard closes` on the
   complete screen, both checked by default.
 - Creates desktop and start menu shortcuts when `RendogLauncher.exe` is available,
@@ -77,8 +82,8 @@ Start screen
   -> create desktop/start menu shortcuts
   -> register uninstaller
   -> complete screen
-  -> apply the desktop shortcut option
-  -> run RendogLauncher.exe when checked
+  -> apply the desktop shortcut option on close
+  -> run RendogLauncher.exe when "run launcher after the wizard closes" is checked
 ```
 
 ## Current Implementation Flow
@@ -111,6 +116,19 @@ Windows Apps uninstall entry
   -> remove HKLM uninstall entry
   -> schedule install directory deletion
 ```
+
+## UI Screens
+
+| Step | Screen | Primary action |
+| --- | --- | --- |
+| 1 | 시작 | `시작` |
+| 2 | 설치 경로 | `이전` / `설치` (footer) |
+| 3 | 설치 | progress only |
+| 4 | 완료 | `종료` |
+| - | 오류 | `다시 시도` / `닫기` |
+
+The title bar carries the window title plus minimize and close only; the product
+logo appears in the sidebar and on the start screen.
 
 ## Build Check
 
