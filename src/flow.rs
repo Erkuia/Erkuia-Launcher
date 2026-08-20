@@ -4,6 +4,7 @@ use anyhow::{bail, Context};
 
 use crate::{
     auth::{session::Session, store::SecretStore},
+    bundled,
     config::Config,
     launch::{self, LaunchInputs},
     manifest::{self, Manifest},
@@ -76,6 +77,10 @@ pub fn run(
     )?;
 
     reporter.progress(Stage::Mods, 0.0, "모드를 확인하는 중...");
+    if bundled::ensure(&paths.mods_dir(), &paths.disabled_mods_dir())? {
+        log::info!("내장 모드 {} 을(를) 기록했습니다.", bundled::FILE_NAME);
+    }
+
     let sync = mods::prepare_required(
         &paths.mods_dir(),
         &paths.disabled_mods_dir(),

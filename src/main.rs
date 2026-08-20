@@ -8,10 +8,11 @@ use std::{
     time::Duration,
 };
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use slint::{PhysicalPosition, TimerMode};
 
 mod auth;
+mod bundled;
 mod config;
 mod error;
 mod flow;
@@ -403,7 +404,9 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
-    app.run().context("launcher window failed")?;
+    app.show().context("launcher window failed to open")?;
+
+    slint::run_event_loop_until_quit().context("launcher window failed")?;
 
     Ok(())
 }
@@ -521,6 +524,7 @@ fn start_game(app: &LauncherWindow, state: &AppState) {
     };
     let owner = state.clone();
     let weak = app.as_weak();
+    let restore = app.as_weak();
 
     task::spawn(app, ErrorCode::Launch, move |reporter| {
         let outcome = flow::run(&paths, &settings, &secrets, reporter, &cancel)?;
@@ -532,10 +536,25 @@ fn start_game(app: &LauncherWindow, state: &AppState) {
         let _ = weak.upgrade_in_event_loop(move |app| {
             persist_or_report(&owner, &app.as_weak());
 
-            log::info!("Minecraft 실행 완료 · 런처를 종료합니다.");
+            log::info!("Minecraft 실행 완료 · 런처를 숨깁니다.");
             let _ = app.hide();
-            slint::quit_event_loop().ok();
         });
+
+        let mut child = outcome.child;
+        let status = child.wait().context("Minecraft 종료를 기다리지 못했어요.")?;
+
+        log::info!("Minecraft 종료 ({status}) · 런처를 다시 엽니다.");
+
+        let _ = restore.upgrade_in_event_loop(|app| {
+            let _ = app.show();
+        });
+
+        if !status.success() {
+            bail!(
+                "Minecraft 가 비정상 종료됐어요. ({status})\n자세한 기록: {}",
+                paths.logs_dir().join(flow::GAME_LOG_FILE).display()
+            );
+        }
 
         Ok(())
     });

@@ -104,9 +104,10 @@ pub fn scan(mods_dir: &Path, disabled_dir: &Path, manifest: Option<&Manifest>) -
         }
 
         let known = describe(&file_name);
-        let is_required = required
-            .iter()
-            .any(|(required_name, _, _)| required_name == &file_name);
+        let is_required = crate::bundled::is_bundled(&file_name)
+            || required
+                .iter()
+                .any(|(required_name, _, _)| required_name == &file_name);
 
         let source = if enabled { mods_dir } else { disabled_dir };
         let (id, name, description) = known.unwrap_or_else(|| {
@@ -607,6 +608,22 @@ mod tests {
         assert!(!required.can_disable());
         assert!(custom.is_removable());
         assert!(custom.can_disable());
+    }
+
+    #[test]
+    fn the_bundled_mod_is_required_even_without_a_manifest_entry() {
+        let fixture = Fixture::new("bundled");
+        fixture.put("mods", crate::bundled::FILE_NAME);
+
+        let entries = fixture.scan(Some(&manifest()));
+        let bundled = entries
+            .iter()
+            .find(|entry| crate::bundled::is_bundled(&entry.file_name))
+            .expect("the bundled mod shows up");
+
+        assert_eq!(bundled.kind, ModKind::Required);
+        assert!(!bundled.is_removable());
+        assert!(!bundled.can_disable());
     }
 
     #[test]
