@@ -12,14 +12,14 @@ component Avatar inherits Rectangle {
     in property <length> size;
     in property <string> initial;
     in property <image> picture;
-    in property <color> fill;
+    in property <color> fill-color;
     in property <color> text-color;
     in property <length> initial-size;
 
     width: root.size;
     height: root.size;
     border-radius: Theme.radius-avatar;
-    background: root.fill;
+    background: root.fill-color;
     clip: true;
 
     Image {
@@ -27,7 +27,7 @@ component Avatar inherits Rectangle {
         width: 100%;
         height: 100%;
         source: root.picture;
-        image-fit: fill;
+        image-fit: ImageFit.fill;
         image-rendering: pixelated;
     }
 
@@ -70,7 +70,7 @@ export component ProfileChip inherits Rectangle {
             size: Theme.avatar-size;
             initial: root.signed-in ? root.initial : "?";
             picture: root.avatar;
-            fill: root.signed-in ? Theme.accent : Theme.control;
+            fill-color: root.signed-in ? Theme.accent : Theme.control;
             text-color: root.signed-in ? Theme.on-accent : Theme.label;
             initial-size: Typo.body;
         }
@@ -168,7 +168,7 @@ component AccountRow inherits Rectangle {
             size: 26px;
             initial: root.account.initial;
             picture: root.account.avatar;
-            fill: Theme.control;
+            fill-color: Theme.control;
             text-color: Theme.strong;
             initial-size: Typo.caption;
         }
@@ -242,7 +242,7 @@ export component ProfileMenu inherits VerticalLayout {
                 size: 34px;
                 initial: root.account-initial;
                 picture: root.account-avatar;
-                fill: Theme.accent;
+                fill-color: Theme.accent;
                 text-color: Theme.on-accent;
                 initial-size: Typo.avatar-initial;
             }
