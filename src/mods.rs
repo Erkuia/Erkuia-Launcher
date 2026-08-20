@@ -1,0 +1,406 @@
+#![allow(dead_code)]
+
+use std::path::{Path, PathBuf};
+
+use anyhow::Context;
+
+use crate::manifest::Manifest;
+
+pub const JAR_EXTENSION: &str = "jar";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModKind {
+    Required,
+    Local,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModInfo {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub kind: ModKind,
+    pub enabled: bool,
+    pub file_name: String,
+}
+
+impl ModInfo {
+    pub fn is_removable(&self) -> bool {
+        self.kind == ModKind::Local
+    }
+
+    pub fn can_disable(&self) -> bool {
+        self.kind == ModKind::Local
+    }
+}
+
+pub fn is_jar(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case(JAR_EXTENSION))
+}
+
+fn jars_in(dir: &Path) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+
+    let mut names: Vec<String> = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file() && is_jar(path))
+        .filter_map(|path| path.file_name()?.to_str().map(str::to_string))
+        .collect();
+
+    names.sort_unstable();
+    names.dedup();
+
+    names
+}
+
+fn required_lookup(manifest: Option<&Manifest>) -> Vec<(String, String, String)> {
+    let Some(manifest) = manifest else {
+        return Vec::new();
+    };
+
+    manifest
+        .mods
+        .iter()
+        .filter(|artifact| artifact.required)
+        .map(|artifact| {
+            (
+                artifact.file_name.clone(),
+                artifact.id.clone(),
+                artifact.name.clone(),
+            )
+        })
+        .collect()
+}
+
+pub fn scan(mods_dir: &Path, disabled_dir: &Path, manifest: Option<&Manifest>) -> Vec<ModInfo> {
+    let required = required_lookup(manifest);
+    let describe = |file_name: &str| {
+        manifest
+            .and_then(|manifest| {
+                manifest
+                    .mods
+                    .iter()
+                    .find(|artifact| artifact.file_name == file_name)
+            })
+            .map(|artifact| (artifact.id.clone(), artifact.name.clone(), artifact.description.clone()))
+    };
+
+    let mut found: Vec<ModInfo> = Vec::new();
+
+    for (file_name, enabled) in jars_in(mods_dir)
+        .into_iter()
+        .map(|name| (name, true))
+        .chain(jars_in(disabled_dir).into_iter().map(|name| (name, false)))
+    {
+        if found.iter().any(|entry| entry.file_name == file_name) {
+            continue;
+        }
+
+        let known = describe(&file_name);
+        let is_required = required
+            .iter()
+            .any(|(required_name, _, _)| required_name == &file_name);
+
+        let (id, name, description) = known.unwrap_or_else(|| {
+            (
+                file_name.clone(),
+                file_name.trim_end_matches(".jar").to_string(),
+                String::new(),
+            )
+        });
+
+        found.push(ModInfo {
+            id,
+            name,
+            description,
+            kind: if is_required {
+                ModKind::Required
+            } else {
+                ModKind::Local
+            },
+            enabled,
+            file_name,
+        });
+    }
+
+    for (file_name, id, name) in required {
+        if found.iter().any(|entry| entry.file_name == file_name) {
+            continue;
+        }
+
+        found.push(ModInfo {
+            id,
+            name,
+            description: String::new(),
+            kind: ModKind::Required,
+            enabled: false,
+            file_name,
+        });
+    }
+
+    found.sort_by(|a, b| {
+        (a.kind == ModKind::Local, &a.file_name).cmp(&(b.kind == ModKind::Local, &b.file_name))
+    });
+
+    found
+}
+
+pub fn local(entries: &[ModInfo]) -> Vec<&ModInfo> {
+    entries
+        .iter()
+        .filter(|entry| entry.kind == ModKind::Local)
+        .collect()
+}
+
+pub fn missing_required(entries: &[ModInfo]) -> Vec<&ModInfo> {
+    entries
+        .iter()
+        .filter(|entry| entry.kind == ModKind::Required && !entry.enabled)
+        .collect()
+}
+
+pub fn path_of(mods_dir: &Path, disabled_dir: &Path, entry: &ModInfo) -> PathBuf {
+    let root = if entry.enabled { mods_dir } else { disabled_dir };
+
+    root.join(&entry.file_name)
+}
+
+pub fn ensure_dirs(mods_dir: &Path, disabled_dir: &Path) -> anyhow::Result<()> {
+    for dir in [mods_dir, disabled_dir] {
+        std::fs::create_dir_all(dir)
+            .with_context(|| format!("{} 폴더를 만들지 못했어요.", dir.display()))?;
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Fixture {
+        root: PathBuf,
+    }
+
+    impl Fixture {
+        fn new(tag: &str) -> Self {
+            let root = std::env::temp_dir().join(format!(
+                "rendog-mods-{tag}-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir_all(root.join("mods")).unwrap();
+            std::fs::create_dir_all(root.join("mods-disabled")).unwrap();
+
+            Self { root }
+        }
+
+        fn mods(&self) -> PathBuf {
+            self.root.join("mods")
+        }
+
+        fn disabled(&self) -> PathBuf {
+            self.root.join("mods-disabled")
+        }
+
+        fn put(&self, dir: &str, name: &str) {
+            std::fs::write(self.root.join(dir).join(name), b"jar").unwrap();
+        }
+
+        fn scan(&self, manifest: Option<&Manifest>) -> Vec<ModInfo> {
+            scan(&self.mods(), &self.disabled(), manifest)
+        }
+    }
+
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            std::fs::remove_dir_all(&self.root).ok();
+        }
+    }
+
+    fn manifest() -> Manifest {
+        Manifest::parse(
+            r#"{
+                "schemaVersion": 1,
+                "launcher": {
+                    "version": "0.1.0",
+                    "url": "https://example.invalid/x.exe",
+                    "size": 1,
+                    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+                },
+                "minecraft": { "version": "1.20.4", "fabricLoader": "0.15.11" },
+                "server": { "address": "rendog.kr" },
+                "mods": [{
+                    "id": "rendog-client",
+                    "name": "RendogClient",
+                    "description": "서버 자동 접속 · 필수 모드",
+                    "required": true,
+                    "url": "https://example.invalid/RendogClient-Delta.jar",
+                    "fileName": "RendogClient-Delta.jar",
+                    "size": 8709016,
+                    "sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
+                }]
+            }"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn only_jar_files_count() {
+        assert!(is_jar(Path::new("a.jar")));
+        assert!(is_jar(Path::new("a.JAR")));
+        assert!(!is_jar(Path::new("a.zip")));
+        assert!(!is_jar(Path::new("a")));
+    }
+
+    #[test]
+    fn a_jar_in_the_mods_folder_is_enabled() {
+        let fixture = Fixture::new("enabled");
+        fixture.put("mods", "custom.jar");
+
+        let entries = fixture.scan(None);
+
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].enabled);
+        assert_eq!(entries[0].kind, ModKind::Local);
+    }
+
+    #[test]
+    fn a_jar_in_the_disabled_folder_is_off() {
+        let fixture = Fixture::new("disabled");
+        fixture.put("mods-disabled", "custom.jar");
+
+        let entries = fixture.scan(None);
+
+        assert_eq!(entries.len(), 1);
+        assert!(!entries[0].enabled);
+    }
+
+    #[test]
+    fn the_enabled_copy_wins_when_a_jar_sits_in_both_folders() {
+        let fixture = Fixture::new("both");
+        fixture.put("mods", "custom.jar");
+        fixture.put("mods-disabled", "custom.jar");
+
+        let entries = fixture.scan(None);
+
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].enabled);
+    }
+
+    #[test]
+    fn a_manifest_mod_is_marked_required() {
+        let fixture = Fixture::new("required");
+        fixture.put("mods", "RendogClient-Delta.jar");
+
+        let entries = fixture.scan(Some(&manifest()));
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].kind, ModKind::Required);
+        assert_eq!(entries[0].id, "rendog-client");
+        assert_eq!(entries[0].name, "RendogClient");
+        assert_eq!(entries[0].description, "서버 자동 접속 · 필수 모드");
+    }
+
+    #[test]
+    fn a_required_mod_that_is_not_installed_still_shows_up() {
+        let fixture = Fixture::new("missing");
+
+        let entries = fixture.scan(Some(&manifest()));
+
+        assert_eq!(entries.len(), 1);
+        assert!(!entries[0].enabled);
+        assert_eq!(missing_required(&entries).len(), 1);
+    }
+
+    #[test]
+    fn required_mods_are_listed_before_local_ones() {
+        let fixture = Fixture::new("order");
+        fixture.put("mods", "aaa.jar");
+        fixture.put("mods", "RendogClient-Delta.jar");
+        fixture.put("mods", "zzz.jar");
+
+        let entries = fixture.scan(Some(&manifest()));
+
+        assert_eq!(entries[0].kind, ModKind::Required);
+        assert_eq!(
+            entries[1..].iter().map(|e| e.file_name.as_str()).collect::<Vec<_>>(),
+            vec!["aaa.jar", "zzz.jar"]
+        );
+    }
+
+    #[test]
+    fn required_mods_cannot_be_removed_or_disabled() {
+        let fixture = Fixture::new("locked");
+        fixture.put("mods", "RendogClient-Delta.jar");
+        fixture.put("mods", "custom.jar");
+
+        let entries = fixture.scan(Some(&manifest()));
+        let required = &entries[0];
+        let custom = &entries[1];
+
+        assert!(!required.is_removable());
+        assert!(!required.can_disable());
+        assert!(custom.is_removable());
+        assert!(custom.can_disable());
+    }
+
+    #[test]
+    fn only_local_mods_reach_the_settings_list() {
+        let fixture = Fixture::new("local");
+        fixture.put("mods", "RendogClient-Delta.jar");
+        fixture.put("mods", "custom.jar");
+
+        let entries = fixture.scan(Some(&manifest()));
+
+        assert_eq!(local(&entries).len(), 1);
+        assert_eq!(local(&entries)[0].file_name, "custom.jar");
+    }
+
+    #[test]
+    fn an_unknown_jar_falls_back_to_its_file_name() {
+        let fixture = Fixture::new("fallback");
+        fixture.put("mods", "some-mod-1.2.3.jar");
+
+        let entries = fixture.scan(Some(&manifest()));
+        let local = local(&entries);
+
+        assert_eq!(local[0].name, "some-mod-1.2.3");
+        assert!(local[0].description.is_empty());
+    }
+
+    #[test]
+    fn non_jar_files_are_ignored() {
+        let fixture = Fixture::new("noise");
+        fixture.put("mods", "readme.txt");
+        fixture.put("mods", "custom.jar");
+
+        assert_eq!(fixture.scan(None).len(), 1);
+    }
+
+    #[test]
+    fn missing_folders_are_treated_as_empty() {
+        let root = std::env::temp_dir().join(format!("rendog-mods-none-{}", std::process::id()));
+
+        assert!(scan(&root.join("mods"), &root.join("mods-disabled"), None).is_empty());
+    }
+
+    #[test]
+    fn the_path_follows_the_enabled_state() {
+        let fixture = Fixture::new("path");
+        fixture.put("mods-disabled", "custom.jar");
+
+        let entries = fixture.scan(None);
+        let path = path_of(&fixture.mods(), &fixture.disabled(), &entries[0]);
+
+        assert!(path.starts_with(fixture.disabled()));
+    }
+}

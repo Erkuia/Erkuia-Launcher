@@ -19,6 +19,7 @@ mod http;
 mod logger;
 mod manifest;
 mod mc;
+mod mods;
 mod paths;
 mod shell;
 mod task;
