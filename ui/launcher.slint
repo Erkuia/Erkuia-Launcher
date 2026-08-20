@@ -3,7 +3,7 @@ import { TitleBar } from "title_bar.slint";
 import { PrimaryButton, SecondaryButton, AccentButton, TextButton, Toggle, Badge, Divider, ReadOnlyField } from "controls.slint";
 import { ValueSlider } from "slider.slint";
 import { ModalOverlay, Popover } from "overlays.slint";
-import { ProfileChip } from "profile.slint";
+import { ProfileChip, ProfileMenu, Account } from "profile.slint";
 
 export component LauncherWindow inherits Window {
     in-out property <string> product-name: "Rendog Launcher";
@@ -16,6 +16,8 @@ export component LauncherWindow inherits Window {
     in-out property <bool> signed-in;
     in-out property <string> account-name;
     in-out property <string> account-initial;
+    in-out property <image> account-avatar;
+    in-out property <[Account]> other-accounts;
 
     in-out property <bool> profile-open;
     in-out property <bool> settings-open;
@@ -32,6 +34,10 @@ export component LauncherWindow inherits Window {
     callback minimize-clicked();
     callback close-clicked();
     callback start-clicked();
+    callback login-clicked();
+    callback add-account-clicked();
+    callback logout-clicked();
+    callback switch-account(string);
 
     title: root.product-name;
     no-frame: true;
@@ -111,6 +117,7 @@ export component LauncherWindow inherits Window {
                                 signed-in: root.signed-in;
                                 name: root.account-name;
                                 initial: root.account-initial;
+                                avatar: root.account-avatar;
                                 clicked => {
                                     root.profile-open = !root.profile-open;
                                 }
@@ -219,6 +226,30 @@ export component LauncherWindow inherits Window {
                         anchor-y: Theme.content-pad-top + Theme.popover-offset-y;
                         close => {
                             root.profile-open = false;
+                        }
+
+                        ProfileMenu {
+                            signed-in: root.signed-in;
+                            account-name: root.account-name;
+                            account-initial: root.account-initial;
+                            account-avatar: root.account-avatar;
+                            other-accounts: root.other-accounts;
+                            login => {
+                                root.profile-open = false;
+                                root.login-clicked();
+                            }
+                            add-account => {
+                                root.profile-open = false;
+                                root.add-account-clicked();
+                            }
+                            logout => {
+                                root.profile-open = false;
+                                root.logout-clicked();
+                            }
+                            switch-account(id) => {
+                                root.profile-open = false;
+                                root.switch-account(id);
+                            }
                         }
                     }
 

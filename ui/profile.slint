@@ -1,4 +1,46 @@
 import { Theme, Typo } from "theme.slint";
+import { AccentButton, Divider } from "controls.slint";
+
+export struct Account {
+    id: string,
+    name: string,
+    initial: string,
+    avatar: image,
+}
+
+component Avatar inherits Rectangle {
+    in property <length> size;
+    in property <string> initial;
+    in property <image> picture;
+    in property <color> fill;
+    in property <color> text-color;
+    in property <length> initial-size;
+
+    width: root.size;
+    height: root.size;
+    border-radius: Theme.radius-avatar;
+    background: root.fill;
+    clip: true;
+
+    Image {
+        visible: root.picture.width > 0;
+        width: 100%;
+        height: 100%;
+        source: root.picture;
+        image-fit: fill;
+        image-rendering: pixelated;
+    }
+
+    Text {
+        visible: root.picture.width == 0;
+        text: root.initial;
+        color: root.text-color;
+        font-size: root.initial-size;
+        font-weight: Typo.bold;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
 
 export component ProfileChip inherits Rectangle {
     in property <bool> signed-in;
@@ -24,31 +66,13 @@ export component ProfileChip inherits Rectangle {
         padding-top: 9px;
         padding-bottom: 9px;
 
-        Rectangle {
-            width: Theme.avatar-size;
-            height: Theme.avatar-size;
-            border-radius: Theme.radius-avatar;
-            background: root.signed-in ? Theme.accent : Theme.control;
-            clip: true;
-
-            Image {
-                visible: root.avatar.width > 0;
-                width: 100%;
-                height: 100%;
-                source: root.avatar;
-                image-fit: fill;
-                image-rendering: pixelated;
-            }
-
-            Text {
-                visible: root.avatar.width == 0;
-                text: root.signed-in ? root.initial : "?";
-                color: root.signed-in ? Theme.on-accent : Theme.label;
-                font-size: Typo.body;
-                font-weight: Typo.bold;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
+        Avatar {
+            size: Theme.avatar-size;
+            initial: root.signed-in ? root.initial : "?";
+            picture: root.avatar;
+            fill: root.signed-in ? Theme.accent : Theme.control;
+            text-color: root.signed-in ? Theme.on-accent : Theme.label;
+            initial-size: Typo.body;
         }
 
         Text {
@@ -77,6 +101,207 @@ export component ProfileChip inherits Rectangle {
         mouse-cursor: MouseCursor.pointer;
         clicked => {
             root.clicked();
+        }
+    }
+}
+
+component MenuSeparator inherits VerticalLayout {
+    height: 9px;
+    padding-top: 2px;
+    padding-bottom: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+
+    Divider { }
+}
+
+component MenuItem inherits Rectangle {
+    in property <string> text;
+    in property <bool> danger;
+    callback clicked();
+
+    border-radius: Theme.radius-control;
+    background: touch.pressed
+        ? Theme.control
+        : (touch.has-hover ? Theme.field-background : transparent);
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 10px;
+        padding-bottom: 12px;
+
+        Text {
+            text: root.text;
+            color: root.danger ? Theme.danger : Theme.menu-text;
+            font-size: Typo.body;
+            font-weight: Typo.semibold;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component AccountRow inherits Rectangle {
+    in property <Account> account;
+    callback clicked();
+
+    border-radius: Theme.radius-control;
+    background: touch.pressed
+        ? Theme.control
+        : (touch.has-hover ? Theme.field-background : transparent);
+
+    HorizontalLayout {
+        spacing: 10px;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+
+        Avatar {
+            size: 26px;
+            initial: root.account.initial;
+            picture: root.account.avatar;
+            fill: Theme.control;
+            text-color: Theme.strong;
+            initial-size: Typo.caption;
+        }
+
+        Text {
+            text: root.account.name;
+            color: Theme.menu-text;
+            font-size: Typo.body;
+            font-weight: Typo.semibold;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component ProfileMenu inherits VerticalLayout {
+    in property <bool> signed-in;
+    in property <string> account-name;
+    in property <string> account-initial;
+    in property <image> account-avatar;
+    in property <[Account]> other-accounts;
+
+    callback login();
+    callback add-account();
+    callback logout();
+    callback switch-account(string);
+
+    spacing: 0px;
+
+    if !root.signed-in: VerticalLayout {
+        spacing: 0px;
+
+        VerticalLayout {
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-top: 4px;
+            padding-bottom: 11px;
+
+            Text {
+                text: "로그인된 계정이 없어요";
+                color: Theme.muted;
+                font-size: Typo.caption;
+            }
+        }
+
+        AccentButton {
+            text: "로그인";
+            clicked => {
+                root.login();
+            }
+        }
+    }
+
+    if root.signed-in: VerticalLayout {
+        spacing: 0px;
+
+        HorizontalLayout {
+            spacing: 10px;
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-top: 10px;
+            padding-bottom: 12px;
+
+            Avatar {
+                size: 34px;
+                initial: root.account-initial;
+                picture: root.account-avatar;
+                fill: Theme.accent;
+                text-color: Theme.on-accent;
+                initial-size: Typo.avatar-initial;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 0px;
+
+                Text {
+                    text: root.account-name;
+                    color: Theme.heading;
+                    font-size: Typo.account-name;
+                    font-weight: Typo.bold;
+                }
+
+                VerticalLayout {
+                    padding-bottom: 1px;
+
+                    Text {
+                        text: "로그인됨";
+                        color: Theme.muted;
+                        font-size: Typo.caption;
+                    }
+                }
+            }
+        }
+
+        MenuSeparator { }
+
+        if root.other-accounts.length > 0: VerticalLayout {
+            spacing: 0px;
+
+            VerticalLayout {
+                padding-bottom: 4px;
+
+                for item in root.other-accounts: AccountRow {
+                    account: item;
+                    clicked => {
+                        root.switch-account(item.id);
+                    }
+                }
+            }
+
+            MenuSeparator { }
+        }
+
+        MenuItem {
+            text: "계정 추가";
+            clicked => {
+                root.add-account();
+            }
+        }
+
+        MenuItem {
+            text: "로그아웃";
+            danger: true;
+            clicked => {
+                root.logout();
+            }
         }
     }
 }
