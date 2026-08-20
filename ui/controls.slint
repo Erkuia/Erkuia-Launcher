@@ -1,0 +1,234 @@
+import { Theme, Typo } from "theme.slint";
+
+export component PrimaryButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    border-radius: Theme.radius-primary;
+    background: !root.enabled
+        ? Theme.control
+        : (touch.pressed ? Theme.accent-pressed : (touch.has-hover ? Theme.accent-hover : Theme.accent));
+
+    animate background { duration: 120ms; easing: ease-out; }
+
+    HorizontalLayout {
+        padding-left: 56px;
+        padding-right: 56px;
+        padding-top: 15px;
+        padding-bottom: 16px;
+
+        Text {
+            text: root.text;
+            color: root.enabled ? Theme.on-accent : Theme.disabled-text;
+            font-size: Typo.primary-button;
+            font-weight: Typo.bold;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component SecondaryButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> compact;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: root.compact ? 35px : Theme.settings-button-height;
+    border-radius: root.compact ? Theme.radius-control : Theme.radius-button;
+    border-width: 1px;
+    border-color: root.compact ? Theme.button-border : Theme.frame-border;
+    background: touch.pressed
+        ? Theme.control
+        : (touch.has-hover ? Theme.field-background : Theme.raised);
+
+    animate background { duration: 120ms; easing: ease-out; }
+
+    HorizontalLayout {
+        padding-left: root.compact ? 14px : 16px;
+        padding-right: root.compact ? 14px : 16px;
+
+        Text {
+            text: root.text;
+            color: root.compact ? Theme.field-text : Theme.body;
+            font-size: root.compact ? Typo.small : Typo.body;
+            font-weight: Typo.semibold;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component AccentButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    border-radius: Theme.radius-control;
+    background: !root.enabled
+        ? Theme.control
+        : (touch.pressed ? Theme.accent-pressed : (touch.has-hover ? Theme.accent-hover : Theme.accent));
+
+    animate background { duration: 120ms; easing: ease-out; }
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 10px;
+        padding-bottom: 12px;
+
+        Text {
+            text: root.text;
+            color: root.enabled ? Theme.on-accent : Theme.disabled-text;
+            font-size: Typo.body;
+            font-weight: Typo.semibold;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component TextButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> danger;
+    callback clicked();
+
+    background: transparent;
+    horizontal-stretch: 0;
+
+    HorizontalLayout {
+        Text {
+            text: root.text;
+            color: root.danger
+                ? (touch.pressed ? Theme.danger-pressed : Theme.danger)
+                : (touch.pressed ? Theme.heading : Theme.label);
+            font-size: Typo.small;
+            font-weight: Typo.semibold;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component Toggle inherits Rectangle {
+    in-out property <bool> checked;
+    in property <bool> enabled: true;
+    callback toggled(bool);
+
+    width: Theme.toggle-width;
+    height: Theme.toggle-height;
+    border-radius: Theme.radius-pill;
+    opacity: root.enabled ? 1.0 : 0.5;
+    background: root.checked
+        ? (touch.pressed ? Theme.accent-pressed : Theme.accent)
+        : Theme.control-off;
+
+    animate background { duration: 120ms; easing: ease-out; }
+
+    Rectangle {
+        x: root.checked ? Theme.toggle-width - 3px - Theme.toggle-knob : 3px;
+        y: 3px;
+        width: Theme.toggle-knob;
+        height: Theme.toggle-knob;
+        border-radius: Theme.radius-pill;
+        background: Theme.raised;
+        drop-shadow-blur: Theme.shadow-knob-blur;
+        drop-shadow-offset-y: Theme.shadow-knob-offset-y;
+        drop-shadow-color: Theme.shadow-knob-color;
+
+        animate x { duration: 120ms; easing: ease-out; }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+export component Badge inherits Rectangle {
+    in property <string> text;
+
+    border-radius: Theme.radius-pill;
+    background: Theme.badge;
+    horizontal-stretch: 0;
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 4px;
+        padding-bottom: 5px;
+
+        Text {
+            text: root.text;
+            color: Theme.secondary;
+            font-size: Typo.badge;
+            font-weight: Typo.bold;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component Divider inherits Rectangle {
+    height: 1px;
+    background: Theme.line;
+}
+
+export component ReadOnlyField inherits Rectangle {
+    in property <string> text;
+
+    border-radius: Theme.radius-control;
+    border-width: 1px;
+    border-color: Theme.field-border;
+    background: Theme.field-background;
+    clip: true;
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 9px;
+        padding-bottom: 9px;
+
+        Text {
+            text: root.text;
+            color: Theme.field-text;
+            font-size: Typo.caption;
+            overflow: elide;
+            vertical-alignment: center;
+        }
+    }
+}
