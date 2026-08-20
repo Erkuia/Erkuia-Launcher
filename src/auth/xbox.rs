@@ -1,4 +1,5 @@
 use anyhow::{bail, Context};
+use reqwest::blocking::Response;
 use serde::Deserialize;
 
 pub const USER_AUTHENTICATE_URL: &str = "https://user.auth.xboxlive.com/user/authenticate";
@@ -148,6 +149,14 @@ pub fn authorize(user_token: &str, relying_party: &str) -> anyhow::Result<XblTok
         return parse(parsed);
     }
 
+    Err(error_from(response, "Xbox Live 권한 확인에 실패했어요."))
+}
+
+/// Turn a rejected Xbox response into an actionable error.
+///
+/// The code arrives either in the `X-Err` header or as `XErr` in the body;
+/// `XblResponseHandler` checks both, so this does too.
+pub fn error_from(response: Response, fallback: &str) -> anyhow::Error {
     let status = response.status();
     let header_code = response
         .headers()
@@ -163,13 +172,10 @@ pub fn authorize(user_token: &str, relying_party: &str) -> anyhow::Result<XblTok
 
     match code {
         Some(code) => {
-            log::error!("XSTS 거부: XErr {code} (HTTP {})", status.as_u16());
-            bail!("{}", describe_xerr(code))
+            log::error!("Xbox 거부: XErr {code} (HTTP {})", status.as_u16());
+            anyhow::anyhow!("{}", describe_xerr(code))
         }
-        None => bail!(
-            "Xbox Live 권한 확인에 실패했어요. (HTTP {})",
-            status.as_u16()
-        ),
+        None => anyhow::anyhow!("{fallback} (HTTP {})", status.as_u16()),
     }
 }
 

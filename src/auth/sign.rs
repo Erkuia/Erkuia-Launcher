@@ -45,6 +45,12 @@ pub fn signature_payload(
     payload
 }
 
+/// Path and query as the signature expects them: joined with no `?`, matching
+/// `getURL().getPath() + (getURL().getQuery() != null ? getQuery() : "")`.
+pub fn path_and_query(url: &reqwest::Url) -> String {
+    format!("{}{}", url.path(), url.query().unwrap_or_default())
+}
+
 /// Device key pair used for `ProofKey` and request signing.
 #[derive(Clone)]
 pub struct DeviceKey {
