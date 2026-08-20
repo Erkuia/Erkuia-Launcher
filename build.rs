@@ -3,6 +3,11 @@ fn main() {
 
     #[cfg(target_os = "windows")]
     {
+        // `slint_build::compile` already emits `rerun-if-changed` directives, so
+        // cargo no longer watches the whole package. The icon has to be listed
+        // explicitly or a changed icon would not trigger a rebuild.
+        println!("cargo:rerun-if-changed=assets/rendog-installer.ico");
+
         let mut resource = winresource::WindowsResource::new();
         resource
             .set_icon("assets/rendog-installer.ico")
