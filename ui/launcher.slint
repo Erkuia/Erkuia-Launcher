@@ -30,6 +30,7 @@ export component LauncherWindow inherits Window {
     callback title-drag-ended();
     callback minimize-clicked();
     callback close-clicked();
+    callback start-clicked();
 
     title: root.product-name;
     no-frame: true;
@@ -118,9 +119,78 @@ export component LauncherWindow inherits Window {
                             }
                         }
 
-                        Rectangle {
-                            background: transparent;
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 0px;
                             vertical-stretch: 1;
+
+                            HorizontalLayout {
+                                alignment: center;
+
+                                Rectangle {
+                                    width: Theme.logo-size;
+                                    height: Theme.logo-size;
+                                    background: transparent;
+
+                                    Image {
+                                        width: Theme.logo-glyph;
+                                        height: Theme.logo-glyph;
+                                        source: @image-url("../assets/rendog-logo-256.png");
+                                        image-fit: contain;
+                                    }
+                                }
+                            }
+
+                            VerticalLayout {
+                                padding-top: 22px;
+
+                                Text {
+                                    text: "RENDOG LAUNCHER";
+                                    color: Theme.heading;
+                                    font-size: Typo.hero-title;
+                                    font-weight: Typo.bold;
+                                    letter-spacing: Typo.hero-title-spacing;
+                                    horizontal-alignment: center;
+                                }
+                            }
+
+                            VerticalLayout {
+                                padding-top: 8px;
+
+                                Text {
+                                    text: root.server-address + " · Minecraft " + root.minecraft-version;
+                                    color: Theme.muted;
+                                    font-size: Typo.hero-subtitle;
+                                    letter-spacing: Typo.hero-subtitle-spacing;
+                                    horizontal-alignment: center;
+                                }
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                padding-top: 36px;
+
+                                PrimaryButton {
+                                    text: "시작";
+                                    enabled: root.signed-in && !root.busy;
+                                    clicked => {
+                                        root.start-clicked();
+                                    }
+                                }
+                            }
+
+                            VerticalLayout {
+                                padding-top: 14px;
+                                padding-bottom: 2px;
+
+                                Text {
+                                    text: root.status-hint;
+                                    visible: root.status-hint != "";
+                                    color: Theme.disabled-text;
+                                    font-size: Typo.small;
+                                    horizontal-alignment: center;
+                                }
+                            }
                         }
 
                         Text {
