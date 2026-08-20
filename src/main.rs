@@ -7,6 +7,7 @@ use slint::{PhysicalPosition, TimerMode};
 
 mod config;
 mod error;
+mod http;
 mod logger;
 mod paths;
 mod task;
