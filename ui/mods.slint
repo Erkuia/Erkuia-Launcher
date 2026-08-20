@@ -101,42 +101,26 @@ export component ModRow inherits HorizontalLayout {
     callback toggled(bool);
     callback removed();
 
-    HorizontalLayout {
-        spacing: 13px;
+    VerticalLayout {
+        spacing: 2px;
+        alignment: center;
         horizontal-stretch: 0;
 
+        Text {
+            text: root.name;
+            color: Theme.title;
+            font-size: Typo.body;
+            font-weight: Typo.semibold;
+        }
+
         VerticalLayout {
-            spacing: 2px;
-            alignment: center;
+            padding-bottom: 1px;
 
-            HorizontalLayout {
-                spacing: 13px;
-
-                Text {
-                    text: root.name;
-                    color: Theme.title;
-                    font-size: Typo.body;
-                    font-weight: Typo.semibold;
-                }
-
-                if root.removable: TextButton {
-                    text: "삭제";
-                    danger: true;
-                    clicked => {
-                        root.removed();
-                    }
-                }
-            }
-
-            VerticalLayout {
-                padding-bottom: 1px;
-
-                Text {
-                    text: root.description == "" ? "(None)" : root.description;
-                    color: root.description == "" ? Theme.faint : Theme.muted;
-                    font-italic: root.description == "";
-                    font-size: Typo.caption;
-                }
+            Text {
+                text: root.description == "" ? "(None)" : root.description;
+                color: root.description == "" ? Theme.faint : Theme.muted;
+                font-italic: root.description == "";
+                font-size: Typo.caption;
             }
         }
     }
@@ -146,18 +130,34 @@ export component ModRow inherits HorizontalLayout {
         horizontal-stretch: 1;
     }
 
-    VerticalLayout {
-        alignment: center;
+    HorizontalLayout {
+        spacing: 12px;
         horizontal-stretch: 0;
 
-        if root.required: Badge {
-            text: "필수";
+        if root.removable: VerticalLayout {
+            alignment: center;
+
+            TextButton {
+                text: "삭제";
+                danger: true;
+                clicked => {
+                    root.removed();
+                }
+            }
         }
 
-        if !root.required: Toggle {
-            checked <=> root.enabled;
-            toggled(on) => {
-                root.toggled(on);
+        VerticalLayout {
+            alignment: center;
+
+            if root.required: Badge {
+                text: "필수";
+            }
+
+            if !root.required: Toggle {
+                checked <=> root.enabled;
+                toggled(on) => {
+                    root.toggled(on);
+                }
             }
         }
     }
