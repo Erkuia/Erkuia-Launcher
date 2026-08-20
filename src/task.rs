@@ -8,6 +8,8 @@ use std::{
     time::Duration,
 };
 
+use slint::ComponentHandle;
+
 use crate::{error::ErrorCode, LauncherWindow};
 
 /// Cooperative cancellation shared between the UI thread and background work.
