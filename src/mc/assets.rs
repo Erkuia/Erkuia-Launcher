@@ -54,8 +54,9 @@ impl AssetIndex {
             targets.push(DownloadTarget {
                 url: object_url(&object.hash),
                 relative_path: object_path(&object.hash),
-                sha1: object.hash.clone(),
+                sha1: Some(object.hash.clone()),
                 size: object.size,
+                name: None,
             });
         }
 
@@ -79,8 +80,9 @@ pub fn index_target(reference: &AssetIndexRef) -> DownloadTarget {
     DownloadTarget {
         url: reference.url.clone(),
         relative_path: index_path(&reference.id),
-        sha1: reference.sha1.clone(),
+        sha1: Some(reference.sha1.clone()),
         size: reference.size,
+        name: None,
     }
 }
 
