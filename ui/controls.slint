@@ -78,6 +78,7 @@ export component SecondaryButton inherits Rectangle {
 
 export component ProgressBar inherits Rectangle {
     in property <float> progress;
+    in property <bool> indeterminate;
 
     width: Theme.progress-width;
     background: transparent;
@@ -90,7 +91,7 @@ export component ProgressBar inherits Rectangle {
         background: Theme.control;
         clip: true;
 
-        Rectangle {
+        if !root.indeterminate: Rectangle {
             x: 0px;
             y: 0px;
             width: parent.width * Math.max(0, Math.min(1, root.progress));
@@ -99,6 +100,15 @@ export component ProgressBar inherits Rectangle {
             background: Theme.accent;
 
             animate width { duration: 160ms; easing: ease-out; }
+        }
+
+        if root.indeterminate: Rectangle {
+            width: parent.width * 0.35;
+            height: parent.height;
+            x: (parent.width + self.width) * (Math.mod(animation-tick() / 1ms, 1400) / 1400) - self.width;
+            y: 0px;
+            border-radius: Theme.radius-progress;
+            background: Theme.accent;
         }
     }
 }

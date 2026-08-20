@@ -395,24 +395,24 @@ fn start_login(app: &LauncherWindow, state: &AppState) {
     let weak = app.as_weak();
 
     task::spawn(app, ErrorCode::Login, move |reporter| {
-        reporter.progress(Stage::Auth, 0.0, "Microsoft 로그인 준비 중...");
+        reporter.overall(0.05, "Microsoft 로그인 준비 중...");
         let code = msa::request_device_code()?;
 
         msa::open_in_browser(&code.direct_verification_uri())?;
-        reporter.progress(Stage::Auth, 0.2, "브라우저에서 로그인을 완료해 주세요.");
+        reporter.waiting("브라우저에서 로그인을 완료해 주세요.");
 
         let token = msa::poll_for_token(&code, &cancel)?;
-        reporter.progress(Stage::Auth, 0.6, "계정을 확인하는 중...");
+        reporter.overall(0.45, "Xbox 인증 중...");
 
         let mut session = Session::from_msa_token(identity, token)?;
         session.verify_ownership()?;
 
-        reporter.progress(Stage::Auth, 0.8, "프로필을 불러오는 중...");
+        reporter.overall(0.8, "프로필을 불러오는 중...");
         let profile = session.profile()?;
 
         if let (Some(cache_dir), Some(skin_url)) = (cache_dir.as_deref(), profile.skin_url.as_ref())
         {
-            reporter.progress(Stage::Auth, 0.9, "스킨을 불러오는 중...");
+            reporter.overall(0.92, "스킨을 불러오는 중...");
             if let Err(error) = avatar::fetch_head(cache_dir, &profile.id, skin_url) {
                 log::warn!("스킨을 불러오지 못했습니다: {error:#}");
             }

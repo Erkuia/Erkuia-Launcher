@@ -31,6 +31,7 @@ export component LauncherWindow inherits Window {
 
     in-out property <bool> busy;
     in-out property <float> progress;
+    in-out property <bool> progress-indeterminate;
     in-out property <string> status-hint: "시작하려면 먼저 로그인해 주세요";
 
     in-out property <bool> error-open;
@@ -223,6 +224,7 @@ export component LauncherWindow inherits Window {
 
                                     ProgressBar {
                                         progress: root.progress;
+                                        indeterminate: root.progress-indeterminate;
                                     }
                                 }
                             }

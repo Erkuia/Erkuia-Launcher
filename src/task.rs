@@ -111,15 +111,32 @@ pub struct Reporter {
 
 impl Reporter {
     pub fn progress(&self, stage: Stage, local: f32, message: impl Into<String>) {
-        let fraction = overall(stage, local);
+        let message = message.into();
+        log::info!("{:?} {message}", stage);
+
+        self.overall(overall(stage, local), message);
+    }
+
+    pub fn overall(&self, fraction: f32, message: impl Into<String>) {
+        let fraction = fraction.clamp(0.0, 1.0);
         let message = message.into();
 
-        log::info!("{:?} {:>3.0}% {message}", stage, fraction * 100.0);
+        log::info!("{:>3.0}% {message}", fraction * 100.0);
 
-        let text = message;
         let _ = self.app.upgrade_in_event_loop(move |app| {
+            app.set_progress_indeterminate(false);
             app.set_progress(fraction);
-            app.set_status_hint(text.into());
+            app.set_status_hint(message.into());
+        });
+    }
+
+    pub fn waiting(&self, message: impl Into<String>) {
+        let message = message.into();
+        log::info!("대기 중 · {message}");
+
+        let _ = self.app.upgrade_in_event_loop(move |app| {
+            app.set_progress_indeterminate(true);
+            app.set_status_hint(message.into());
         });
     }
 }
@@ -136,6 +153,7 @@ where
 
     app.set_busy(true);
     app.set_progress(0.0);
+    app.set_progress_indeterminate(false);
 
     let reporter = Reporter {
         app: app.as_weak(),
@@ -147,6 +165,8 @@ where
 
         let _ = app.upgrade_in_event_loop(move |app| {
             app.set_busy(false);
+
+            app.set_progress_indeterminate(false);
 
             match result {
                 Ok(()) => app.set_progress(1.0),
