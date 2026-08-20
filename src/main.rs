@@ -16,6 +16,7 @@ mod config;
 mod error;
 mod hash;
 mod http;
+mod java;
 mod logger;
 mod manifest;
 mod mc;
