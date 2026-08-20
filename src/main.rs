@@ -9,6 +9,7 @@ mod config;
 mod error;
 mod logger;
 mod paths;
+mod task;
 
 use config::Config;
 use error::{ErrorCode, UserError};
