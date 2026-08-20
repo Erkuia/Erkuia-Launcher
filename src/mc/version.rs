@@ -214,7 +214,7 @@ fn target_from(artifact: &Artifact, name: &str, classifier: Option<&str>) -> Opt
 
     Some(DownloadTarget {
         url: artifact.url.clone(),
-        relative_path,
+        relative_path: format!("libraries/{relative_path}"),
         sha1: artifact.sha1.clone(),
         size: artifact.size,
     })
@@ -451,6 +451,27 @@ mod tests {
 
         assert_eq!(plan.libraries.len(), 1);
         assert_eq!(plan.libraries[0].sha1, "1");
+    }
+
+    #[test]
+    fn every_target_is_relative_to_the_minecraft_directory() {
+        let libraries = r#"
+            {
+                "name": "org.lwjgl:lwjgl:3.3.3",
+                "downloads": { "artifact": {
+                    "path": "org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3.jar",
+                    "url": "https://example.invalid/a.jar", "sha1": "1", "size": 1
+                }}
+            }
+        "#;
+
+        let plan = detail(libraries).plan(WINDOWS).unwrap();
+
+        assert_eq!(
+            plan.libraries[0].relative_path,
+            "libraries/org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3.jar"
+        );
+        assert!(plan.client.relative_path.starts_with("versions/"));
     }
 
     #[test]
