@@ -27,6 +27,7 @@ mod modconfig;
 mod mods;
 mod paths;
 mod runtime;
+mod selfupdate;
 mod shell;
 mod task;
 mod update;
@@ -135,7 +136,20 @@ impl AppState {
     }
 }
 
+/// The elevated half of a self-update: swap the executable and exit. It shows no
+/// window, because the process that asked for it is still running and will
+/// relaunch once this returns.
+fn run_update_helper(staged: &Path) -> anyhow::Result<()> {
+    let exe = std::env::current_exe().context("failed to resolve current executable")?;
+
+    selfupdate::install(staged, &exe)
+}
+
 fn main() -> anyhow::Result<()> {
+    if let Some(staged) = selfupdate::staged_from_args() {
+        return run_update_helper(&staged);
+    }
+
     std::env::set_var("SLINT_STYLE", "fluent-light");
 
     let app = LauncherWindow::new().context("failed to create launcher window")?;
@@ -387,6 +401,16 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
+    app.on_update_clicked({
+        let app = app.as_weak();
+        let state = state.clone();
+        move || {
+            if let Some(app) = app.upgrade() {
+                start_self_update(&app, &state);
+            }
+        }
+    });
+
     app.on_close_clicked({
         let app = app.as_weak();
         let title_drag_state = Rc::clone(&title_drag_state);
@@ -437,6 +461,12 @@ fn start_up(app: &LauncherWindow, state: &AppState) {
     );
 
     app.set_data_directory(resolved.data_dir().display().to_string().into());
+
+    // A previous update left the old executable behind; it could not be deleted
+    // while it was still the running image.
+    if let Ok(dir) = paths::install_dir() {
+        selfupdate::clean_backups(&dir);
+    }
 
     let loaded = match Config::load(&resolved.config_file()) {
         Ok(loaded) => {
@@ -496,6 +526,46 @@ fn announce_update(app: &LauncherWindow, found: Option<update::Version>) {
         }
         None => app.set_update_available(false),
     }
+}
+
+fn start_self_update(app: &LauncherWindow, state: &AppState) {
+    let Some(paths) = state.paths.lock().ok().and_then(|paths| paths.clone()) else {
+        return;
+    };
+    let Ok(release) = state.manifest.lock().map(|manifest| manifest.launcher.clone()) else {
+        return;
+    };
+
+    // The banner could be stale if the manifest changed under us. Re-checking
+    // costs nothing and avoids "updating" to the version already running.
+    if update::newer(&release.version, env!("CARGO_PKG_VERSION")).is_none() {
+        return;
+    }
+
+    state.cancel.reset();
+
+    let cancel = state.cancel.clone();
+    let weak = app.as_weak();
+
+    task::spawn(app, ErrorCode::Update, move |reporter| {
+        let exe = std::env::current_exe().context("현재 실행 파일 경로를 알 수 없어요.")?;
+
+        reporter.progress(task::Stage::Download, 0.0, "새 런처를 받는 중...");
+        let staged = selfupdate::stage(&release, &paths.cache_dir(), reporter, &cancel)?;
+
+        reporter.waiting("런처를 교체하는 중...");
+        selfupdate::apply(&staged, &exe)?;
+
+        reporter.progress(task::Stage::Launch, 1.0, "새 런처를 실행합니다.");
+        shell::open(&exe.display().to_string())?;
+
+        let _ = weak.upgrade_in_event_loop(|app| {
+            let _ = app.hide();
+            slint::quit_event_loop().ok();
+        });
+
+        Ok(())
+    });
 }
 
 fn check_for_update(app: &LauncherWindow, state: &AppState) {

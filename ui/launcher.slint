@@ -58,6 +58,7 @@ export component LauncherWindow inherits Window {
     callback toggle-mod(string, bool);
     callback remove-mod(string);
     callback error-retry();
+    callback update-clicked();
 
     title: root.product-name;
     no-frame: true;
@@ -245,13 +246,24 @@ export component LauncherWindow inherits Window {
                             }
                         }
 
-                        Text {
-                            text: root.update-available
-                                ? root.launcher-version + " · 새 버전 " + root.update-version + " 있음"
-                                : root.launcher-version;
-                            color: root.update-available ? Theme.accent : Theme.faint;
-                            font-size: Typo.footer;
+                        TouchArea {
+                            height: version-label.preferred-height;
                             vertical-stretch: 0;
+                            enabled: root.update-available && !root.busy;
+                            mouse-cursor: MouseCursor.pointer;
+                            clicked => {
+                                root.update-clicked();
+                            }
+
+                            version-label := Text {
+                                text: root.update-available
+                                    ? root.launcher-version + " · 새 버전 " + root.update-version + " 설치"
+                                    : root.launcher-version;
+                                color: root.update-available
+                                    ? (parent.has-hover ? Theme.accent-hover : Theme.accent)
+                                    : Theme.faint;
+                                font-size: Typo.footer;
+                            }
                         }
                     }
 
