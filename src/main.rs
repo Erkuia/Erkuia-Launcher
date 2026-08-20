@@ -14,6 +14,7 @@ use slint::{PhysicalPosition, TimerMode};
 mod auth;
 mod config;
 mod error;
+mod flow;
 mod hash;
 mod http;
 mod java;
@@ -246,6 +247,16 @@ fn main() -> anyhow::Result<()> {
                 settings.adaptive_rendering = enabled;
             }
             schedule_save();
+        }
+    });
+
+    app.on_start_clicked({
+        let app = app.as_weak();
+        let state = state.clone();
+        move || {
+            if let Some(app) = app.upgrade() {
+                start_game(&app, &state);
+            }
         }
     });
 
@@ -493,6 +504,41 @@ where
     }
 
     refresh_mods(app, state);
+}
+
+fn start_game(app: &LauncherWindow, state: &AppState) {
+    let Some(paths) = state.paths.lock().ok().and_then(|paths| paths.clone()) else {
+        return;
+    };
+
+    state.cancel.reset();
+
+    let cancel = state.cancel.clone();
+    let settings = state.snapshot();
+    let secrets = match state.secrets.lock() {
+        Ok(secrets) => secrets.clone(),
+        Err(_) => return,
+    };
+    let owner = state.clone();
+    let weak = app.as_weak();
+
+    task::spawn(app, ErrorCode::Launch, move |reporter| {
+        let outcome = flow::run(&paths, &settings, &secrets, reporter, &cancel)?;
+
+        if let Ok(mut settings) = owner.settings.lock() {
+            settings.managed_mods = outcome.managed_mods;
+        }
+
+        let _ = weak.upgrade_in_event_loop(move |app| {
+            persist_or_report(&owner, &app.as_weak());
+
+            log::info!("Minecraft 실행 완료 · 런처를 종료합니다.");
+            let _ = app.hide();
+            slint::quit_event_loop().ok();
+        });
+
+        Ok(())
+    });
 }
 
 fn start_login(app: &LauncherWindow, state: &AppState) {
