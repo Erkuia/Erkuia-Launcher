@@ -1,0 +1,73 @@
+import { Theme } from "theme.slint";
+
+export component ModalOverlay inherits Rectangle {
+    in property <bool> open;
+    callback close();
+
+    visible: root.open;
+    background: Theme.scrim;
+
+    TouchArea {
+        clicked => {
+            root.close();
+        }
+    }
+
+    Rectangle {
+        width: Theme.modal-width;
+        height: Theme.modal-height;
+        border-radius: Theme.radius-modal;
+        background: Theme.raised;
+        drop-shadow-blur: Theme.shadow-modal-blur;
+        drop-shadow-offset-y: Theme.shadow-modal-offset-y;
+        drop-shadow-color: Theme.shadow-modal-color;
+
+        TouchArea { }
+
+        VerticalLayout {
+            padding-left: Theme.modal-pad-x;
+            padding-right: Theme.modal-pad-x;
+            padding-top: Theme.modal-pad-top;
+            padding-bottom: Theme.modal-pad-bottom;
+
+            @children
+        }
+    }
+}
+
+export component Popover inherits Rectangle {
+    in property <bool> open;
+    in property <length> anchor-x: 0px;
+    in property <length> anchor-y: Theme.popover-offset-y;
+    callback close();
+
+    visible: root.open;
+    background: transparent;
+
+    TouchArea {
+        clicked => {
+            root.close();
+        }
+    }
+
+    Rectangle {
+        x: root.anchor-x;
+        y: root.anchor-y;
+        width: Theme.popover-width;
+        border-radius: Theme.radius-popover;
+        border-width: 1px;
+        border-color: Theme.frame-border;
+        background: Theme.raised;
+        drop-shadow-blur: Theme.shadow-popover-blur;
+        drop-shadow-offset-y: Theme.shadow-popover-offset-y;
+        drop-shadow-color: Theme.shadow-popover-color;
+
+        TouchArea { }
+
+        VerticalLayout {
+            padding: Theme.popover-pad;
+
+            @children
+        }
+    }
+}
