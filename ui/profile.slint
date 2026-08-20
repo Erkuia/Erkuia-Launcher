@@ -4,6 +4,7 @@ export component ProfileChip inherits Rectangle {
     in property <bool> signed-in;
     in property <string> name;
     in property <string> initial;
+    in property <image> avatar;
     callback clicked();
 
     border-radius: Theme.radius-pill;
@@ -26,10 +27,21 @@ export component ProfileChip inherits Rectangle {
         Rectangle {
             width: Theme.avatar-size;
             height: Theme.avatar-size;
-            border-radius: Theme.radius-pill;
+            border-radius: Theme.radius-avatar;
             background: root.signed-in ? Theme.accent : Theme.control;
+            clip: true;
+
+            Image {
+                visible: root.avatar.width > 0;
+                width: 100%;
+                height: 100%;
+                source: root.avatar;
+                image-fit: fill;
+                image-rendering: pixelated;
+            }
 
             Text {
+                visible: root.avatar.width == 0;
                 text: root.signed-in ? root.initial : "?";
                 color: root.signed-in ? Theme.on-accent : Theme.label;
                 font-size: Typo.body;
