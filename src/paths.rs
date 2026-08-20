@@ -39,6 +39,10 @@ impl Paths {
         self.minecraft_dir().join("mods-disabled")
     }
 
+    pub fn natives_dir(&self) -> PathBuf {
+        self.minecraft_dir().join("natives")
+    }
+
     pub fn runtime_dir(&self) -> PathBuf {
         self.data_dir.join("runtime")
     }

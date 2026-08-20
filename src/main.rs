@@ -17,6 +17,7 @@ mod error;
 mod hash;
 mod http;
 mod java;
+mod launch;
 mod logger;
 mod manifest;
 mod mc;
