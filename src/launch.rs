@@ -181,6 +181,12 @@ pub fn jvm_arguments(inputs: &LaunchInputs<'_>) -> Vec<String> {
         "-XX:G1HeapRegionSize=32M".to_string(),
         "-Dfile.encoding=UTF-8".to_string(),
         format!("-Djava.library.path={}", inputs.natives_dir.display()),
+        format!(
+            "-Dorg.lwjgl.system.SharedLibraryExtractPath={}",
+            inputs.natives_dir.display()
+        ),
+        format!("-Djna.tmpdir={}", inputs.natives_dir.display()),
+        format!("-Dio.netty.native.workdir={}", inputs.natives_dir.display()),
         format!("-Dminecraft.launcher.brand={LAUNCHER_BRAND}"),
         format!("-Dminecraft.launcher.version={}", inputs.launcher_version),
     ];

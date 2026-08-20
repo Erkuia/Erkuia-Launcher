@@ -211,6 +211,24 @@ mod tests {
     }
 
     #[test]
+    fn a_natives_jar_is_not_swallowed_by_its_plain_artifact() {
+        let vanilla = vec![
+            vanilla("org.lwjgl:lwjgl:3.3.2", "org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2.jar"),
+            vanilla(
+                "org.lwjgl:lwjgl:3.3.2:natives-windows",
+                "org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-windows.jar",
+            ),
+        ];
+
+        let merged = merge_libraries(&[], &vanilla);
+
+        assert_eq!(merged.len(), 2);
+        assert!(merged
+            .iter()
+            .any(|target| target.relative_path.ends_with("natives-windows.jar")));
+    }
+
+    #[test]
     fn builds_the_meta_urls() {
         assert_eq!(
             loaders_url("1.20.4"),

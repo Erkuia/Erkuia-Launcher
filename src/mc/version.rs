@@ -39,6 +39,26 @@ impl Platform {
             },
         }
     }
+
+    fn natives_os(self) -> &'static str {
+        match self.name {
+            "osx" => "macos",
+            other => other,
+        }
+    }
+
+    /// 1.20.4 ships every Windows native under the same `os.name` rule, so the
+    /// rules alone would let x86 and arm64 binaries onto an x64 classpath. The
+    /// classifier is what actually names the architecture: 64-bit gets the bare
+    /// `natives-<os>` and everything else carries an explicit suffix.
+    pub fn native_classifier(self) -> String {
+        let os = self.natives_os();
+
+        match self.arch {
+            "x86_64" => format!("natives-{os}"),
+            arch => format!("natives-{os}-{arch}"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -193,13 +213,26 @@ pub struct VersionPlan {
     pub natives: Vec<DownloadTarget>,
 }
 
+/// The version is left out so a newer copy of an artifact replaces an older
+/// one, but the classifier is kept: `org.lwjgl:lwjgl:3.3.2:natives-windows`
+/// carries the platform binaries and must not collapse into the plain jar.
 pub fn maven_key(name: &str) -> Option<String> {
     let mut parts = name.split(':');
     let group = parts.next()?;
     let artifact = parts.next()?;
+    let _version = parts.next();
 
-    Some(format!("{group}:{artifact}"))
+    Some(match parts.next() {
+        Some(classifier) => format!("{group}:{artifact}:{classifier}"),
+        None => format!("{group}:{artifact}"),
+    })
 }
+
+pub fn maven_classifier(name: &str) -> Option<&str> {
+    name.split(':').nth(3)
+}
+
+pub const NATIVES_PREFIX: &str = "natives-";
 
 pub fn maven_path(name: &str, classifier: Option<&str>) -> Option<String> {
     let mut parts = name.split(':');
@@ -236,9 +269,18 @@ impl VersionDetail {
     pub fn plan(&self, platform: Platform) -> anyhow::Result<VersionPlan> {
         let mut libraries = Vec::new();
         let mut natives = Vec::new();
+        let wanted_natives = platform.native_classifier();
 
         for library in &self.libraries {
             if !rules_allow(&library.rules, platform) {
+                continue;
+            }
+
+            let foreign_natives = maven_classifier(&library.name).is_some_and(|classifier| {
+                classifier.starts_with(NATIVES_PREFIX) && classifier != wanted_natives
+            });
+
+            if foreign_natives {
                 continue;
             }
 
@@ -535,6 +577,85 @@ mod tests {
         let detail: VersionDetail = serde_json::from_str(json).unwrap();
 
         assert_eq!(detail.plan(WINDOWS).unwrap().java_major, 21);
+    }
+
+    #[test]
+    fn the_native_classifier_follows_the_architecture() {
+        let windows = |arch| Platform { name: "windows", arch, bits: "64" };
+
+        assert_eq!(windows("x86_64").native_classifier(), "natives-windows");
+        assert_eq!(windows("arm64").native_classifier(), "natives-windows-arm64");
+        assert_eq!(windows("x86").native_classifier(), "natives-windows-x86");
+        assert_eq!(
+            Platform { name: "osx", arch: "arm64", bits: "64" }.native_classifier(),
+            "natives-macos-arm64"
+        );
+    }
+
+    #[test]
+    fn only_the_matching_architecture_native_survives() {
+        let json = r#"{
+            "id": "1.20.4",
+            "mainClass": "net.minecraft.client.main.Main",
+            "assets": "12",
+            "assetIndex": {"id":"12","url":"u","sha1":"s","size":1,"totalSize":2},
+            "downloads": {"client": {"url":"c","sha1":"cs","size":3}},
+            "libraries": [
+                {
+                    "name": "org.lwjgl:lwjgl:3.3.2",
+                    "downloads": {"artifact": {"path":"org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2.jar","url":"u","sha1":"a","size":1}}
+                },
+                {
+                    "name": "org.lwjgl:lwjgl:3.3.2:natives-windows",
+                    "rules": [{"action":"allow","os":{"name":"windows"}}],
+                    "downloads": {"artifact": {"path":"org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-windows.jar","url":"u","sha1":"b","size":1}}
+                },
+                {
+                    "name": "org.lwjgl:lwjgl:3.3.2:natives-windows-x86",
+                    "rules": [{"action":"allow","os":{"name":"windows"}}],
+                    "downloads": {"artifact": {"path":"org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-windows-x86.jar","url":"u","sha1":"c","size":1}}
+                },
+                {
+                    "name": "org.lwjgl:lwjgl:3.3.2:natives-windows-arm64",
+                    "rules": [{"action":"allow","os":{"name":"windows"}}],
+                    "downloads": {"artifact": {"path":"org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-windows-arm64.jar","url":"u","sha1":"d","size":1}}
+                }
+            ]
+        }"#;
+
+        let detail: VersionDetail = serde_json::from_str(json).unwrap();
+        let plan = detail.plan(WINDOWS).unwrap();
+        let paths: Vec<&str> = plan
+            .libraries
+            .iter()
+            .map(|target| target.relative_path.as_str())
+            .collect();
+
+        assert_eq!(paths.len(), 2, "got {paths:?}");
+        assert!(paths.iter().any(|path| path.ends_with("lwjgl-3.3.2.jar")));
+        assert!(paths
+            .iter()
+            .any(|path| path.ends_with("lwjgl-3.3.2-natives-windows.jar")));
+    }
+
+    #[test]
+    fn the_key_drops_the_version_so_a_newer_copy_replaces_an_older_one() {
+        assert_eq!(
+            maven_key("org.ow2.asm:asm:9.6").unwrap(),
+            maven_key("org.ow2.asm:asm:9.3").unwrap()
+        );
+    }
+
+    #[test]
+    fn the_key_keeps_the_classifier_so_natives_survive_deduplication() {
+        let plain = maven_key("org.lwjgl:lwjgl:3.3.2").unwrap();
+        let natives = maven_key("org.lwjgl:lwjgl:3.3.2:natives-windows").unwrap();
+
+        assert_ne!(plain, natives);
+        assert_ne!(
+            natives,
+            maven_key("org.lwjgl:lwjgl:3.3.2:natives-windows-arm64").unwrap()
+        );
     }
 
     #[test]
