@@ -1,0 +1,95 @@
+import { Theme, Typo } from "theme.slint";
+import { SecondaryButton, AccentButton } from "controls.slint";
+
+export component ErrorModal inherits Rectangle {
+    in property <bool> open;
+    in property <string> code;
+    in property <string> message;
+    in property <bool> retryable: true;
+    callback retry();
+    callback close();
+
+    visible: root.open;
+    background: Theme.scrim;
+
+    TouchArea {
+        clicked => {
+            root.close();
+        }
+    }
+
+    Rectangle {
+        width: 400px;
+        border-radius: Theme.radius-modal;
+        background: Theme.raised;
+        drop-shadow-blur: Theme.shadow-modal-blur;
+        drop-shadow-offset-y: Theme.shadow-modal-offset-y;
+        drop-shadow-color: Theme.shadow-modal-color;
+
+        TouchArea { }
+
+        VerticalLayout {
+            padding-left: Theme.modal-pad-x;
+            padding-right: Theme.modal-pad-x;
+            padding-top: Theme.modal-pad-top;
+            padding-bottom: Theme.modal-pad-bottom;
+            spacing: 0px;
+
+            Text {
+                text: "문제가 발생했어요";
+                color: Theme.heading;
+                font-size: Typo.modal-title;
+                font-weight: Typo.bold;
+            }
+
+            VerticalLayout {
+                padding-top: 10px;
+
+                Text {
+                    text: root.message;
+                    color: Theme.strong;
+                    font-size: Typo.body;
+                    wrap: word-wrap;
+                }
+            }
+
+            VerticalLayout {
+                padding-top: 8px;
+
+                Text {
+                    text: root.code;
+                    visible: root.code != "";
+                    color: Theme.faint;
+                    font-size: Typo.footer;
+                }
+            }
+
+            HorizontalLayout {
+                padding-top: 22px;
+                spacing: 8px;
+
+                Rectangle {
+                    background: transparent;
+                    horizontal-stretch: 1;
+                }
+
+                SecondaryButton {
+                    text: "닫기";
+                    compact: true;
+                    clicked => {
+                        root.close();
+                    }
+                }
+
+                AccentButton {
+                    text: "다시 시도";
+                    visible: root.retryable;
+                    pad-x: 16px;
+                    clicked => {
+                        root.retry();
+                    }
+                }
+            }
+        }
+    }
+}

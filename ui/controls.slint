@@ -76,9 +76,44 @@ export component SecondaryButton inherits Rectangle {
     }
 }
 
+export component ProgressButton inherits Rectangle {
+    in property <float> progress;
+
+    border-radius: Theme.radius-primary;
+    background: Theme.control;
+    clip: true;
+
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width * Math.max(0, Math.min(1, root.progress));
+        height: parent.height;
+        background: Theme.accent;
+
+        animate width { duration: 160ms; easing: ease-out; }
+    }
+
+    HorizontalLayout {
+        padding-left: 56px;
+        padding-right: 56px;
+        padding-top: 15px;
+        padding-bottom: 16px;
+
+        Text {
+            text: Math.round(Math.max(0, Math.min(1, root.progress)) * 100) + "%";
+            color: Theme.heading;
+            font-size: Typo.primary-button;
+            font-weight: Typo.bold;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
 export component AccentButton inherits Rectangle {
     in property <string> text;
     in property <bool> enabled: true;
+    in property <length> pad-x: 10px;
     callback clicked();
 
     border-radius: Theme.radius-control;
@@ -89,8 +124,8 @@ export component AccentButton inherits Rectangle {
     animate background { duration: 120ms; easing: ease-out; }
 
     HorizontalLayout {
-        padding-left: 10px;
-        padding-right: 10px;
+        padding-left: root.pad-x;
+        padding-right: root.pad-x;
         padding-top: 10px;
         padding-bottom: 12px;
 

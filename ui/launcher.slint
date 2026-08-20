@@ -1,6 +1,7 @@
 import { Theme, Typo } from "theme.slint";
 import { TitleBar } from "title_bar.slint";
-import { PrimaryButton, SecondaryButton, AccentButton, TextButton, Toggle, Badge, Divider, ReadOnlyField } from "controls.slint";
+import { PrimaryButton, ProgressButton, SecondaryButton, AccentButton, TextButton, Toggle, Badge, Divider, ReadOnlyField } from "controls.slint";
+import { ErrorModal } from "error.slint";
 import { ValueSlider } from "slider.slint";
 import { ModalOverlay, Popover } from "overlays.slint";
 import { ProfileChip, ProfileMenu, Account } from "profile.slint";
@@ -29,7 +30,13 @@ export component LauncherWindow inherits Window {
     in-out property <[ModEntry]> local-mods;
 
     in-out property <bool> busy;
+    in-out property <float> progress;
     in-out property <string> status-hint: "시작하려면 먼저 로그인해 주세요";
+
+    in-out property <bool> error-open;
+    in-out property <string> error-code;
+    in-out property <string> error-message;
+    in-out property <bool> error-retryable: true;
 
     callback title-drag-started(float, float);
     callback title-drag-moved(float, float);
@@ -47,6 +54,7 @@ export component LauncherWindow inherits Window {
     callback add-mod-clicked();
     callback toggle-mod(string, bool);
     callback remove-mod(string);
+    callback error-retry();
 
     title: root.product-name;
     no-frame: true;
@@ -74,6 +82,10 @@ export component LauncherWindow inherits Window {
 
             key-pressed(event) => {
                 if (event.text == Key.Escape) {
+                    if (root.error-open) {
+                        root.error-open = false;
+                        return accept;
+                    }
                     if (root.settings-open) {
                         root.settings-open = false;
                         return accept;
@@ -196,12 +208,16 @@ export component LauncherWindow inherits Window {
                                 alignment: center;
                                 padding-top: 36px;
 
-                                PrimaryButton {
+                                if !root.busy: PrimaryButton {
                                     text: "시작";
-                                    enabled: root.signed-in && !root.busy;
+                                    enabled: root.signed-in;
                                     clicked => {
                                         root.start-clicked();
                                     }
+                                }
+
+                                if root.busy: ProgressButton {
+                                    progress: root.progress;
                                 }
                             }
 
@@ -296,6 +312,22 @@ export component LauncherWindow inherits Window {
                             open-directory => {
                                 root.open-directory-clicked();
                             }
+                        }
+                    }
+
+                    ErrorModal {
+                        width: 100%;
+                        height: 100%;
+                        open: root.error-open;
+                        code: root.error-code;
+                        message: root.error-message;
+                        retryable: root.error-retryable;
+                        close => {
+                            root.error-open = false;
+                        }
+                        retry => {
+                            root.error-open = false;
+                            root.error-retry();
                         }
                     }
                 }
