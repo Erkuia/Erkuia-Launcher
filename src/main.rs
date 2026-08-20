@@ -34,6 +34,8 @@ use auth::{
 };
 use config::{AccountRecord, Config};
 use error::{ErrorCode, UserError};
+use manifest::Manifest;
+use mods::ModInfo;
 use paths::Paths;
 use task::{Cancel, Stage};
 
@@ -52,6 +54,7 @@ struct AppState {
     paths: Arc<Mutex<Option<Paths>>>,
     settings: Arc<Mutex<Config>>,
     secrets: Arc<Mutex<SecretStore>>,
+    manifest: Arc<Mutex<Manifest>>,
     cancel: Cancel,
 }
 
@@ -61,12 +64,35 @@ impl AppState {
             paths: Arc::new(Mutex::new(None)),
             settings: Arc::new(Mutex::new(Config::default())),
             secrets: Arc::new(Mutex::new(SecretStore::new())),
+            manifest: Arc::new(Mutex::new(manifest::builtin())),
             cancel: Cancel::new(),
         }
     }
 
     fn cache_dir(&self) -> Option<std::path::PathBuf> {
         self.paths.lock().ok()?.as_ref().map(Paths::cache_dir)
+    }
+
+    fn mod_dirs(&self) -> Option<(std::path::PathBuf, std::path::PathBuf)> {
+        let held = self.paths.lock().ok()?;
+        let paths = held.as_ref()?;
+
+        Some((paths.mods_dir(), paths.disabled_mods_dir()))
+    }
+
+    fn manifest(&self) -> Manifest {
+        self.manifest
+            .lock()
+            .map(|manifest| manifest.clone())
+            .unwrap_or_else(|_| manifest::builtin())
+    }
+
+    fn scan_mods(&self) -> Vec<ModInfo> {
+        let Some((mods_dir, disabled_dir)) = self.mod_dirs() else {
+            return Vec::new();
+        };
+
+        mods::scan(&mods_dir, &disabled_dir, Some(&self.manifest()))
     }
 
     fn identity(&self) -> anyhow::Result<DeviceIdentity> {
@@ -217,6 +243,56 @@ fn main() -> anyhow::Result<()> {
                 settings.adaptive_rendering = enabled;
             }
             schedule_save();
+        }
+    });
+
+    app.on_add_mod_clicked({
+        let app = app.as_weak();
+        let state = state.clone();
+        move || {
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+
+            let Some(source) = rfd::FileDialog::new()
+                .set_title("모드 파일 선택")
+                .add_filter("Minecraft 모드", &["jar"])
+                .pick_file()
+            else {
+                return;
+            };
+
+            with_mod_dirs(&app, &state, |mods_dir, disabled_dir, _| {
+                mods::add_local(mods_dir, disabled_dir, &source).map(|_| ())
+            });
+        }
+    });
+
+    app.on_toggle_mod({
+        let app = app.as_weak();
+        let state = state.clone();
+        move |id, enabled| {
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+
+            with_mod_dirs(&app, &state, |mods_dir, disabled_dir, entries| {
+                mods::set_enabled_by_id(mods_dir, disabled_dir, entries, &id, enabled)
+            });
+        }
+    });
+
+    app.on_remove_mod({
+        let app = app.as_weak();
+        let state = state.clone();
+        move |id| {
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+
+            with_mod_dirs(&app, &state, |mods_dir, disabled_dir, entries| {
+                mods::remove_by_id(mods_dir, disabled_dir, entries, &id)
+            });
         }
     });
 
@@ -373,11 +449,47 @@ fn start_up(app: &LauncherWindow, state: &AppState) {
     if let Ok(mut stored) = state.secrets.lock() {
         *stored = secrets;
     }
+    if let Ok(mut stored) = state.manifest.lock() {
+        *stored = manifest::load_local(&resolved.cache_dir());
+    }
     if let Ok(mut paths) = state.paths.lock() {
         *paths = Some(resolved);
     }
 
     apply_accounts(app, state);
+    refresh_mods(app, state);
+}
+
+fn refresh_mods(app: &LauncherWindow, state: &AppState) {
+    let entries: Vec<ModEntry> = mods::local(&state.scan_mods())
+        .into_iter()
+        .map(|info| ModEntry {
+            id: info.id.clone().into(),
+            name: info.name.clone().into(),
+            description: info.description.clone().into(),
+            enabled: info.enabled,
+        })
+        .collect();
+
+    app.set_local_mods(slint::ModelRc::new(slint::VecModel::from(entries)));
+}
+
+fn with_mod_dirs<F>(app: &LauncherWindow, state: &AppState, action: F)
+where
+    F: FnOnce(&Path, &Path, &[ModInfo]) -> anyhow::Result<()>,
+{
+    let Some((mods_dir, disabled_dir)) = state.mod_dirs() else {
+        return;
+    };
+
+    let entries = state.scan_mods();
+
+    if let Err(error) = action(&mods_dir, &disabled_dir, &entries) {
+        show_error(app, ErrorCode::Mod, &error);
+        return;
+    }
+
+    refresh_mods(app, state);
 }
 
 fn start_login(app: &LauncherWindow, state: &AppState) {

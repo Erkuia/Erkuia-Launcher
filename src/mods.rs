@@ -108,11 +108,23 @@ pub fn scan(mods_dir: &Path, disabled_dir: &Path, manifest: Option<&Manifest>) -
             .iter()
             .any(|(required_name, _, _)| required_name == &file_name);
 
+        let source = if enabled { mods_dir } else { disabled_dir };
         let (id, name, description) = known.unwrap_or_else(|| {
+            let metadata = read_metadata(&source.join(&file_name)).unwrap_or_default();
+            let fallback = file_name.trim_end_matches(".jar").to_string();
+
             (
-                file_name.clone(),
-                file_name.trim_end_matches(".jar").to_string(),
-                String::new(),
+                if metadata.id.is_empty() {
+                    file_name.clone()
+                } else {
+                    metadata.id
+                },
+                if metadata.name.is_empty() {
+                    fallback
+                } else {
+                    metadata.name
+                },
+                metadata.description,
             )
         });
 
@@ -170,6 +182,73 @@ pub fn path_of(mods_dir: &Path, disabled_dir: &Path, entry: &ModInfo) -> PathBuf
     let root = if entry.enabled { mods_dir } else { disabled_dir };
 
     root.join(&entry.file_name)
+}
+
+pub const METADATA_ENTRY: &str = "fabric.mod.json";
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Deserialize)]
+pub struct ModMetadata {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub version: String,
+}
+
+pub fn parse_metadata(text: &str) -> Option<ModMetadata> {
+    let metadata: ModMetadata = serde_json::from_str(text).ok()?;
+
+    (!metadata.id.is_empty() || !metadata.name.is_empty()).then_some(metadata)
+}
+
+pub fn read_metadata(jar: &Path) -> Option<ModMetadata> {
+    let file = std::fs::File::open(jar).ok()?;
+    let mut archive = zip::ZipArchive::new(file).ok()?;
+    let mut entry = archive.by_name(METADATA_ENTRY).ok()?;
+
+    let mut text = String::new();
+    std::io::Read::read_to_string(&mut entry, &mut text).ok()?;
+
+    parse_metadata(&text)
+}
+
+pub fn add_local(mods_dir: &Path, disabled_dir: &Path, source: &Path) -> anyhow::Result<String> {
+    if !is_jar(source) {
+        bail!("jar 파일만 추가할 수 있어요.");
+    }
+
+    if !source.is_file() {
+        bail!("파일을 찾지 못했어요: {}", source.display());
+    }
+
+    let file_name = source
+        .file_name()
+        .and_then(|name| name.to_str())
+        .context("파일 이름을 읽지 못했어요.")?
+        .to_string();
+
+    ensure_dirs(mods_dir, disabled_dir)?;
+
+    let destination = mods_dir.join(&file_name);
+
+    if destination == source {
+        return Ok(file_name);
+    }
+
+    std::fs::copy(source, &destination)
+        .with_context(|| format!("{file_name} 을(를) 복사하지 못했어요."))?;
+
+    let parked = disabled_dir.join(&file_name);
+    if parked.is_file() {
+        std::fs::remove_file(&parked).ok();
+    }
+
+    log::info!("로컬 모드 추가: {file_name}");
+
+    Ok(file_name)
 }
 
 pub fn set_enabled(
@@ -568,6 +647,92 @@ mod tests {
         let root = std::env::temp_dir().join(format!("rendog-mods-none-{}", std::process::id()));
 
         assert!(scan(&root.join("mods"), &root.join("mods-disabled"), None).is_empty());
+    }
+
+    #[test]
+    fn fabric_metadata_is_read_from_the_manifest_entry() {
+        let metadata = parse_metadata(
+            r#"{
+                "schemaVersion": 1,
+                "id": "inventory-sorter",
+                "name": "Inventory Sorter",
+                "version": "1.2.3",
+                "description": "인벤토리 정렬 도구"
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(metadata.id, "inventory-sorter");
+        assert_eq!(metadata.name, "Inventory Sorter");
+        assert_eq!(metadata.description, "인벤토리 정렬 도구");
+    }
+
+    #[test]
+    fn metadata_without_an_id_or_name_is_ignored() {
+        assert!(parse_metadata(r#"{"schemaVersion": 1}"#).is_none());
+        assert!(parse_metadata("not json").is_none());
+    }
+
+    #[test]
+    fn metadata_missing_a_description_still_parses() {
+        let metadata = parse_metadata(r#"{"id":"a","name":"A"}"#).unwrap();
+
+        assert!(metadata.description.is_empty());
+    }
+
+    #[test]
+    fn a_jar_without_fabric_metadata_yields_nothing() {
+        let fixture = Fixture::new("nometa");
+        fixture.put("mods", "plain.jar");
+
+        assert!(read_metadata(&fixture.mods().join("plain.jar")).is_none());
+    }
+
+    #[test]
+    fn adding_a_local_mod_copies_it_into_mods() {
+        let fixture = Fixture::new("add");
+        let source = fixture.root.join("downloaded.jar");
+        std::fs::write(&source, b"jar").unwrap();
+
+        let name = add_local(&fixture.mods(), &fixture.disabled(), &source).unwrap();
+
+        assert_eq!(name, "downloaded.jar");
+        assert!(fixture.mods().join("downloaded.jar").is_file());
+        assert!(source.is_file());
+    }
+
+    #[test]
+    fn adding_replaces_a_parked_copy_of_the_same_name() {
+        let fixture = Fixture::new("add-parked");
+        fixture.put("mods-disabled", "custom.jar");
+        let source = fixture.root.join("custom.jar");
+        std::fs::write(&source, b"jar").unwrap();
+
+        add_local(&fixture.mods(), &fixture.disabled(), &source).unwrap();
+
+        assert!(fixture.mods().join("custom.jar").is_file());
+        assert!(!fixture.disabled().join("custom.jar").exists());
+    }
+
+    #[test]
+    fn only_jar_files_can_be_added() {
+        let fixture = Fixture::new("add-bad");
+        let source = fixture.root.join("notes.txt");
+        std::fs::write(&source, b"text").unwrap();
+
+        assert!(add_local(&fixture.mods(), &fixture.disabled(), &source).is_err());
+    }
+
+    #[test]
+    fn adding_a_missing_file_is_reported() {
+        let fixture = Fixture::new("add-missing");
+
+        assert!(add_local(
+            &fixture.mods(),
+            &fixture.disabled(),
+            &fixture.root.join("ghost.jar")
+        )
+        .is_err());
     }
 
     #[test]

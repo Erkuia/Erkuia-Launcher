@@ -134,6 +134,16 @@ fn cache_file(cache_dir: &Path) -> std::path::PathBuf {
     cache_dir.join(CACHE_FILE)
 }
 
+const BUILTIN: &str = include_str!("../launcher-manifest.json");
+
+pub fn builtin() -> Manifest {
+    Manifest::parse(BUILTIN).expect("bundled manifest must be valid")
+}
+
+pub fn load_local(cache_dir: &Path) -> Manifest {
+    load_cached(cache_dir).unwrap_or_else(builtin)
+}
+
 pub fn load_cached(cache_dir: &Path) -> Option<Manifest> {
     let text = std::fs::read_to_string(cache_file(cache_dir)).ok()?;
 
@@ -325,6 +335,22 @@ mod tests {
         assert_eq!(load_cached(&dir), Some(Manifest::parse(SAMPLE).unwrap()));
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn the_bundled_manifest_is_valid() {
+        let manifest = builtin();
+
+        assert_eq!(manifest.minecraft.version, "1.20.4");
+        assert_eq!(manifest.server.address, "rendog.kr");
+        assert_eq!(manifest.required_mods().len(), 1);
+    }
+
+    #[test]
+    fn the_bundled_manifest_is_used_when_no_cache_exists() {
+        let dir = std::env::temp_dir().join(format!("rendog-manifest-nocache-{}", std::process::id()));
+
+        assert_eq!(load_local(&dir), builtin());
     }
 
     #[test]
