@@ -9,6 +9,7 @@ pub const DEFAULT_URL: &str =
 pub const SUPPORTED_SCHEMA: u32 = 1;
 const CACHE_FILE: &str = "launcher-manifest.json";
 const SHA256_HEX_LEN: usize = 64;
+const SHA512_HEX_LEN: usize = 128;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Manifest {
@@ -55,7 +56,10 @@ pub struct ModArtifact {
     #[serde(rename = "fileName")]
     pub file_name: String,
     pub size: u64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sha256: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sha512: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,8 +71,28 @@ pub struct FileArtifact {
     pub sha256: String,
 }
 
+fn is_hex(value: &str, length: usize) -> bool {
+    value.len() == length && value.chars().all(|c| c.is_ascii_hexdigit())
+}
+
 fn is_sha256(value: &str) -> bool {
-    value.len() == SHA256_HEX_LEN && value.chars().all(|c| c.is_ascii_hexdigit())
+    is_hex(value, SHA256_HEX_LEN)
+}
+
+fn is_sha512(value: &str) -> bool {
+    is_hex(value, SHA512_HEX_LEN)
+}
+
+impl ModArtifact {
+    pub fn checksum(&self) -> Option<crate::hash::Checksum> {
+        if is_sha256(&self.sha256) {
+            Some(crate::hash::Checksum::Sha256(self.sha256.clone()))
+        } else if is_sha512(&self.sha512) {
+            Some(crate::hash::Checksum::Sha512(self.sha512.clone()))
+        } else {
+            None
+        }
+    }
 }
 
 impl Manifest {
@@ -95,8 +119,8 @@ impl Manifest {
         }
 
         for artifact in &self.mods {
-            if !is_sha256(&artifact.sha256) {
-                bail!("{} 의 SHA-256 값이 올바르지 않아요.", artifact.id);
+            if artifact.checksum().is_none() {
+                bail!("{} 에 쓸 수 있는 체크섬이 없어요.", artifact.id);
             }
             if artifact.size == 0 {
                 bail!("{} 의 크기가 0이에요.", artifact.id);
@@ -276,6 +300,39 @@ mod tests {
     }
 
     #[test]
+    fn a_mod_may_pin_a_sha512_instead() {
+        let text = SAMPLE.replace(
+            r#""sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a""#,
+            &format!(r#""sha512": "{}""#, "b".repeat(128)),
+        );
+
+        let manifest = Manifest::parse(&text).unwrap();
+
+        assert_eq!(
+            manifest.mods[0].checksum(),
+            Some(crate::hash::Checksum::Sha512("b".repeat(128)))
+        );
+    }
+
+    #[test]
+    fn a_sha256_wins_over_a_sha512_when_both_are_present() {
+        let text = SAMPLE.replace(
+            r#""sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a""#,
+            &format!(
+                r#""sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a", "sha512": "{}""#,
+                "c".repeat(128)
+            ),
+        );
+
+        let manifest = Manifest::parse(&text).unwrap();
+
+        assert!(matches!(
+            manifest.mods[0].checksum(),
+            Some(crate::hash::Checksum::Sha256(_))
+        ));
+    }
+
+    #[test]
     fn a_zero_sized_mod_is_refused() {
         let text = SAMPLE.replace("\"size\": 8709016", "\"size\": 0");
 
@@ -343,7 +400,34 @@ mod tests {
 
         assert_eq!(manifest.minecraft.version, "1.20.4");
         assert_eq!(manifest.server.address, "rendog.kr");
-        assert_eq!(manifest.required_mods().len(), 1);
+        assert_eq!(manifest.required_mods().len(), 2);
+    }
+
+    #[test]
+    fn the_bundled_manifest_pins_fabric_api_and_the_client() {
+        let manifest = builtin();
+        let ids: Vec<&str> = manifest
+            .required_mods()
+            .iter()
+            .map(|artifact| artifact.id.as_str())
+            .collect();
+
+        assert!(ids.contains(&"fabric-api"));
+        assert!(ids.contains(&"rendog-client"));
+    }
+
+    #[test]
+    fn the_bundled_loader_clears_the_client_requirement() {
+        let pinned = builtin().minecraft.fabric_loader;
+        let parts: Vec<u32> = pinned
+            .split('.')
+            .map(|part| part.parse().expect("loader version is numeric"))
+            .collect();
+
+        assert!(
+            (parts[0], parts[1], parts[2]) >= (0, 16, 9),
+            "RendogClient 는 Fabric Loader 0.16.9 이상을 요구해요 (현재 {pinned})"
+        );
     }
 
     #[test]

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context};
 
-use crate::{hash::Checksum, manifest::Manifest, mc::version::DownloadTarget};
+use crate::{manifest::Manifest, mc::version::DownloadTarget};
 
 pub const MODS_RELATIVE: &str = "mods";
 
@@ -373,7 +373,7 @@ pub fn required_targets(manifest: &Manifest) -> Vec<DownloadTarget> {
         .map(|artifact| DownloadTarget {
             url: artifact.url.clone(),
             relative_path: format!("{MODS_RELATIVE}/{}", artifact.file_name),
-            checksum: Some(Checksum::Sha256(artifact.sha256.clone())),
+            checksum: artifact.checksum(),
             size: artifact.size,
             name: Some(artifact.id.clone()),
         })
@@ -870,7 +870,7 @@ mod tests {
         assert_eq!(targets[0].relative_path, "mods/RendogClient-Delta.jar");
         assert_eq!(
             targets[0].checksum,
-            Some(Checksum::Sha256(
+            Some(crate::hash::Checksum::Sha256(
                 "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a".to_string()
             ))
         );

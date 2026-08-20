@@ -10,6 +10,7 @@ const BUFFER: usize = 64 * 1024;
 pub enum Checksum {
     Sha1(String),
     Sha256(String),
+    Sha512(String),
 }
 
 impl Checksum {
@@ -17,12 +18,13 @@ impl Checksum {
         match self {
             Self::Sha1(_) => "SHA-1",
             Self::Sha256(_) => "SHA-256",
+            Self::Sha512(_) => "SHA-512",
         }
     }
 
     pub fn expected(&self) -> &str {
         match self {
-            Self::Sha1(value) | Self::Sha256(value) => value,
+            Self::Sha1(value) | Self::Sha256(value) | Self::Sha512(value) => value,
         }
     }
 
@@ -30,6 +32,7 @@ impl Checksum {
         match self {
             Self::Sha1(_) => sha1_file(path),
             Self::Sha256(_) => sha256_file(path),
+            Self::Sha512(_) => sha512_file(path),
         }
     }
 
@@ -68,6 +71,13 @@ pub fn sha1_file(path: &Path) -> anyhow::Result<String> {
 
 pub fn sha256_file(path: &Path) -> anyhow::Result<String> {
     let mut hasher = sha2::Sha256::new();
+    read_into(path, |chunk| Sha2Digest::update(&mut hasher, chunk))?;
+
+    Ok(hex(&hasher.finalize()))
+}
+
+pub fn sha512_file(path: &Path) -> anyhow::Result<String> {
+    let mut hasher = sha2::Sha512::new();
     read_into(path, |chunk| Sha2Digest::update(&mut hasher, chunk))?;
 
     Ok(hex(&hasher.finalize()))
@@ -115,6 +125,17 @@ mod tests {
         assert_eq!(
             sha256_file(&path).unwrap(),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn sha512_matches_the_known_digest_of_abc() {
+        let path = temp("sha512", b"abc");
+
+        assert_eq!(
+            sha512_file(&path).unwrap(),
+            "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a\
+             2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
         );
     }
 
@@ -175,5 +196,6 @@ mod tests {
     fn the_algorithm_is_reported_for_messages() {
         assert_eq!(Checksum::Sha1(String::new()).algorithm(), "SHA-1");
         assert_eq!(Checksum::Sha256(String::new()).algorithm(), "SHA-256");
+        assert_eq!(Checksum::Sha512(String::new()).algorithm(), "SHA-512");
     }
 }
