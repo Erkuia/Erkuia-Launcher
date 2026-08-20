@@ -23,6 +23,7 @@ mod launch;
 mod logger;
 mod manifest;
 mod mc;
+mod modconfig;
 mod mods;
 mod paths;
 mod runtime;
