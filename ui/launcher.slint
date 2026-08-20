@@ -1,3 +1,5 @@
+import { Theme, Typo } from "theme.slint";
+
 export component LauncherWindow inherits Window {
     in-out property <string> product-name: "Rendog Launcher";
     in-out property <string> launcher-version: "v0.1.0";
@@ -7,9 +9,10 @@ export component LauncherWindow inherits Window {
     in-out property <string> data-directory: "";
 
     title: root.product-name;
-    width: 1000px;
-    height: 640px;
-    background: #fcfdff;
+    width: Theme.window-width;
+    height: Theme.window-height;
+    background: Theme.surface;
+    default-font-family: Typo.family;
 
     VerticalLayout {
         alignment: center;
@@ -17,37 +20,39 @@ export component LauncherWindow inherits Window {
 
         Text {
             text: "RENDOG LAUNCHER";
-            color: #141619;
-            font-size: 18px;
-            font-weight: 700;
+            color: Theme.heading;
+            font-size: Typo.hero-title;
+            font-weight: Typo.bold;
+            letter-spacing: Typo.hero-title-spacing;
             horizontal-alignment: center;
         }
 
         Text {
             text: root.server-address + " · Minecraft " + root.minecraft-version;
-            color: #66696c;
-            font-size: 13px;
+            color: Theme.muted;
+            font-size: Typo.hero-subtitle;
+            letter-spacing: Typo.hero-subtitle-spacing;
             horizontal-alignment: center;
         }
 
         Text {
             text: root.launcher-version;
-            color: #83868a;
-            font-size: 11px;
+            color: Theme.faint;
+            font-size: Typo.footer;
             horizontal-alignment: center;
         }
 
         Text {
             text: "프로그램 " + root.program-directory;
-            color: #83868a;
-            font-size: 11px;
+            color: Theme.faint;
+            font-size: Typo.footer;
             horizontal-alignment: center;
         }
 
         Text {
             text: "데이터 " + root.data-directory;
-            color: #83868a;
-            font-size: 11px;
+            color: Theme.faint;
+            font-size: Typo.footer;
             horizontal-alignment: center;
         }
     }
