@@ -108,6 +108,7 @@ pub fn run(
         username: &profile.name,
         uuid: &profile.id,
         access_token: &token.access_token,
+        server_address: &manifest.server.address,
         heap_megabytes: launch::detect_heap_megabytes(),
         launcher_version: env!("CARGO_PKG_VERSION"),
         log_path: &log_path,

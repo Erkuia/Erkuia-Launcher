@@ -161,6 +161,7 @@ pub struct LaunchInputs<'a> {
     pub username: &'a str,
     pub uuid: &'a str,
     pub access_token: &'a str,
+    pub server_address: &'a str,
     pub heap_megabytes: u32,
     pub launcher_version: &'a str,
     pub log_path: &'a Path,
@@ -203,8 +204,22 @@ pub fn jvm_arguments(inputs: &LaunchInputs<'_>) -> Vec<String> {
     arguments
 }
 
+/// Quick Play is the vanilla way in: 1.20.4 declares the flag behind the
+/// `is_quick_play_multiplayer` feature, so the client dials the server itself
+/// and the launcher needs no agreement with any mod. An empty address simply
+/// leaves the player on the multiplayer screen.
+pub fn quick_play_arguments(server_address: &str) -> Vec<String> {
+    let address = server_address.trim();
+
+    if address.is_empty() {
+        return Vec::new();
+    }
+
+    vec!["--quickPlayMultiplayer".to_string(), address.to_string()]
+}
+
 pub fn game_arguments(inputs: &LaunchInputs<'_>) -> Vec<String> {
-    vec![
+    let mut arguments = vec![
         "--username".to_string(),
         inputs.username.to_string(),
         "--version".to_string(),
@@ -227,7 +242,11 @@ pub fn game_arguments(inputs: &LaunchInputs<'_>) -> Vec<String> {
         USER_TYPE.to_string(),
         "--versionType".to_string(),
         VERSION_TYPE.to_string(),
-    ]
+    ];
+
+    arguments.extend(quick_play_arguments(inputs.server_address));
+
+    arguments
 }
 
 fn output_file(path: &Path) -> anyhow::Result<std::fs::File> {
@@ -390,6 +409,7 @@ mod tests {
             username: "KkulBee_",
             uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5",
             access_token: "TOKEN",
+            server_address: "rendog.kr",
             heap_megabytes: 4096,
             launcher_version: "0.1.0",
             log_path: Path::new("/mc/logs/minecraft.log"),
@@ -543,6 +563,46 @@ mod tests {
         }
 
         assert!(arguments.contains(&"msa".to_string()));
+    }
+
+    #[test]
+    fn the_server_address_is_handed_over_as_quick_play() {
+        let java = JavaInstall {
+            home: PathBuf::from("/java"),
+            major: 21,
+        };
+        let version = version();
+        let loader = loader();
+        let inputs = inputs(
+            Path::new("/mc"),
+            Path::new("/mc/natives"),
+            &java,
+            &version,
+            &loader,
+            &[],
+        );
+
+        let arguments = game_arguments(&inputs);
+        let address = arguments
+            .iter()
+            .position(|argument| argument == "--quickPlayMultiplayer")
+            .map(|index| arguments[index + 1].as_str());
+
+        assert_eq!(address, Some("rendog.kr"));
+    }
+
+    #[test]
+    fn no_address_leaves_the_player_on_the_multiplayer_screen() {
+        assert!(quick_play_arguments("").is_empty());
+        assert!(quick_play_arguments("   ").is_empty());
+    }
+
+    #[test]
+    fn the_address_is_trimmed_before_it_reaches_the_client() {
+        assert_eq!(
+            quick_play_arguments("  rendog.kr \n"),
+            vec!["--quickPlayMultiplayer".to_string(), "rendog.kr".to_string()]
+        );
     }
 
     #[test]
