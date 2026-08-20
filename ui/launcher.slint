@@ -3,6 +3,7 @@ import { TitleBar } from "title_bar.slint";
 import { PrimaryButton, SecondaryButton, AccentButton, TextButton, Toggle, Badge, Divider, ReadOnlyField } from "controls.slint";
 import { ValueSlider } from "slider.slint";
 import { ModalOverlay, Popover } from "overlays.slint";
+import { ProfileChip } from "profile.slint";
 
 export component LauncherWindow inherits Window {
     in-out property <string> product-name: "Rendog Launcher";
@@ -105,6 +106,15 @@ export component LauncherWindow inherits Window {
 
                         HorizontalLayout {
                             vertical-stretch: 0;
+
+                            ProfileChip {
+                                signed-in: root.signed-in;
+                                name: root.account-name;
+                                initial: root.account-initial;
+                                clicked => {
+                                    root.profile-open = !root.profile-open;
+                                }
+                            }
 
                             Rectangle {
                                 background: transparent;

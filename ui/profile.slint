@@ -1,0 +1,70 @@
+import { Theme, Typo } from "theme.slint";
+
+export component ProfileChip inherits Rectangle {
+    in property <bool> signed-in;
+    in property <string> name;
+    in property <string> initial;
+    callback clicked();
+
+    border-radius: Theme.radius-pill;
+    border-width: 1px;
+    border-color: Theme.frame-border;
+    background: touch.pressed
+        ? Theme.control
+        : (touch.has-hover ? Theme.field-background : Theme.raised);
+    horizontal-stretch: 0;
+
+    animate background { duration: 120ms; easing: ease-out; }
+
+    HorizontalLayout {
+        spacing: 10px;
+        padding-left: 9px;
+        padding-right: 15px;
+        padding-top: 9px;
+        padding-bottom: 9px;
+
+        Rectangle {
+            width: Theme.avatar-size;
+            height: Theme.avatar-size;
+            border-radius: Theme.radius-pill;
+            background: root.signed-in ? Theme.accent : Theme.control;
+
+            Text {
+                text: root.signed-in ? root.initial : "?";
+                color: root.signed-in ? Theme.on-accent : Theme.label;
+                font-size: Typo.body;
+                font-weight: Typo.bold;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: root.signed-in ? root.name : "No profile";
+            color: root.signed-in ? Theme.title : Theme.secondary;
+            font-size: Typo.body;
+            font-weight: Typo.semibold;
+            vertical-alignment: center;
+        }
+
+        VerticalLayout {
+            padding-left: 2px;
+            padding-bottom: 1px;
+            alignment: center;
+
+            Text {
+                text: "▾";
+                color: Theme.tick;
+                font-size: Typo.chevron;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
