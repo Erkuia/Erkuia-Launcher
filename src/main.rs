@@ -1,6 +1,12 @@
 #![windows_subsystem = "windows"]
 
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{
+    cell::RefCell,
+    path::Path,
+    rc::Rc,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use anyhow::Context;
 use slint::{PhysicalPosition, TimerMode};
@@ -13,9 +19,18 @@ mod logger;
 mod paths;
 mod task;
 
-use config::Config;
+use auth::{
+    avatar,
+    device::DeviceIdentity,
+    minecraft::MinecraftProfile,
+    msa,
+    session::Session,
+    store::SecretStore,
+};
+use config::{AccountRecord, Config};
 use error::{ErrorCode, UserError};
 use paths::Paths;
+use task::{Cancel, Stage};
 
 slint::include_modules!();
 
@@ -25,6 +40,61 @@ const SAVE_DEBOUNCE: Duration = Duration::from_millis(400);
 struct TitleDragState {
     pointer_x: f32,
     pointer_y: f32,
+}
+
+#[derive(Clone)]
+struct AppState {
+    paths: Arc<Mutex<Option<Paths>>>,
+    settings: Arc<Mutex<Config>>,
+    secrets: Arc<Mutex<SecretStore>>,
+    cancel: Cancel,
+}
+
+impl AppState {
+    fn new() -> Self {
+        Self {
+            paths: Arc::new(Mutex::new(None)),
+            settings: Arc::new(Mutex::new(Config::default())),
+            secrets: Arc::new(Mutex::new(SecretStore::new())),
+            cancel: Cancel::new(),
+        }
+    }
+
+    fn cache_dir(&self) -> Option<std::path::PathBuf> {
+        self.paths.lock().ok()?.as_ref().map(Paths::cache_dir)
+    }
+
+    fn identity(&self) -> anyhow::Result<DeviceIdentity> {
+        self.secrets
+            .lock()
+            .map_err(|_| anyhow::anyhow!("계정 저장소 잠금이 손상됐어요."))?
+            .identity()
+    }
+
+    fn snapshot(&self) -> Config {
+        self.settings
+            .lock()
+            .map(|settings| settings.clone())
+            .unwrap_or_default()
+    }
+
+    fn persist(&self) -> anyhow::Result<()> {
+        let Some(paths) = self.paths.lock().ok().and_then(|paths| paths.clone()) else {
+            return Ok(());
+        };
+
+        let settings = self.snapshot();
+        settings.save(&paths.config_file())?;
+
+        let secrets = self
+            .secrets
+            .lock()
+            .map_err(|_| anyhow::anyhow!("계정 저장소 잠금이 손상됐어요."))?
+            .clone();
+        secrets.save(&paths.secrets_file())?;
+
+        Ok(())
+    }
 }
 
 fn main() -> anyhow::Result<()> {
@@ -40,25 +110,22 @@ fn main() -> anyhow::Result<()> {
             .into(),
     );
 
-    let paths: Rc<RefCell<Option<Paths>>> = Rc::new(RefCell::new(None));
-    let settings: Rc<RefCell<Config>> = Rc::new(RefCell::new(Config::default()));
+    let state = AppState::new();
     let save_timer = Rc::new(slint::Timer::default());
 
-    start_up(&app, &paths, &settings);
+    start_up(&app, &state);
 
     let schedule_save = {
         let timer = Rc::clone(&save_timer);
-        let paths = Rc::clone(&paths);
-        let settings = Rc::clone(&settings);
+        let state = state.clone();
         let app_weak = app.as_weak();
 
         move || {
-            let paths = Rc::clone(&paths);
-            let settings = Rc::clone(&settings);
+            let state = state.clone();
             let app_weak = app_weak.clone();
 
             timer.start(TimerMode::SingleShot, SAVE_DEBOUNCE, move || {
-                save_settings(&paths, &settings, &app_weak);
+                persist_or_report(&state, &app_weak);
             });
         }
     };
@@ -82,11 +149,11 @@ fn main() -> anyhow::Result<()> {
         let app = app.as_weak();
         let title_drag_state = Rc::clone(&title_drag_state);
         move |pointer_x, pointer_y| {
-            if let (Some(app), Some(state)) = (app.upgrade(), *title_drag_state.borrow()) {
+            if let (Some(app), Some(drag)) = (app.upgrade(), *title_drag_state.borrow()) {
                 let window = app.window();
                 let scale_factor = window.scale_factor();
-                let delta_x = ((pointer_x - state.pointer_x) * scale_factor).round() as i32;
-                let delta_y = ((pointer_y - state.pointer_y) * scale_factor).round() as i32;
+                let delta_x = ((pointer_x - drag.pointer_x) * scale_factor).round() as i32;
+                let delta_y = ((pointer_y - drag.pointer_y) * scale_factor).round() as i32;
 
                 if delta_x == 0 && delta_y == 0 {
                     return;
@@ -126,29 +193,96 @@ fn main() -> anyhow::Result<()> {
     });
 
     app.on_fps_changed({
-        let settings = Rc::clone(&settings);
+        let state = state.clone();
         let schedule_save = schedule_save.clone();
         move |fps| {
-            settings.borrow_mut().target_fps = fps;
+            if let Ok(mut settings) = state.settings.lock() {
+                settings.target_fps = fps;
+            }
             schedule_save();
         }
     });
 
     app.on_adaptive_changed({
-        let settings = Rc::clone(&settings);
+        let state = state.clone();
         move |enabled| {
-            settings.borrow_mut().adaptive_rendering = enabled;
+            if let Ok(mut settings) = state.settings.lock() {
+                settings.adaptive_rendering = enabled;
+            }
             schedule_save();
+        }
+    });
+
+    app.on_login_clicked({
+        let app = app.as_weak();
+        let state = state.clone();
+        move || {
+            if let Some(app) = app.upgrade() {
+                start_login(&app, &state);
+            }
+        }
+    });
+
+    app.on_add_account_clicked({
+        let app = app.as_weak();
+        let state = state.clone();
+        move || {
+            if let Some(app) = app.upgrade() {
+                start_login(&app, &state);
+            }
+        }
+    });
+
+    app.on_logout_clicked({
+        let app = app.as_weak();
+        let state = state.clone();
+        move || {
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+
+            let removed = state.snapshot().selected_account;
+            let Some(id) = removed else {
+                return;
+            };
+
+            if let Ok(mut settings) = state.settings.lock() {
+                settings.remove_account(&id);
+            }
+            if let Ok(mut secrets) = state.secrets.lock() {
+                secrets.remove(&id);
+            }
+
+            log::info!("계정 로그아웃: {id}");
+            apply_accounts(&app, &state);
+            persist_or_report(&state, &app.as_weak());
+        }
+    });
+
+    app.on_switch_account({
+        let app = app.as_weak();
+        let state = state.clone();
+        move |id| {
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+
+            if let Ok(mut settings) = state.settings.lock() {
+                settings.selected_account = Some(id.to_string());
+            }
+
+            log::info!("계정 전환: {id}");
+            apply_accounts(&app, &state);
+            persist_or_report(&state, &app.as_weak());
         }
     });
 
     app.on_error_retry({
         let app = app.as_weak();
-        let paths = Rc::clone(&paths);
-        let settings = Rc::clone(&settings);
+        let state = state.clone();
         move || {
             if let Some(app) = app.upgrade() {
-                start_up(&app, &paths, &settings);
+                start_up(&app, &state);
             }
         }
     });
@@ -156,16 +290,14 @@ fn main() -> anyhow::Result<()> {
     app.on_close_clicked({
         let app = app.as_weak();
         let title_drag_state = Rc::clone(&title_drag_state);
-        let paths = Rc::clone(&paths);
-        let settings = Rc::clone(&settings);
+        let state = state.clone();
         let save_timer = Rc::clone(&save_timer);
         move || {
             *title_drag_state.borrow_mut() = None;
+            state.cancel.cancel();
 
-            // A debounced save may still be pending; write it out now instead of
-            // dropping the user's last change on the way out.
             save_timer.stop();
-            save_settings(&paths, &settings, &app);
+            persist_or_report(&state, &app);
 
             if let Some(app) = app.upgrade() {
                 let _ = app.hide();
@@ -179,23 +311,19 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn start_up(
-    app: &LauncherWindow,
-    paths: &Rc<RefCell<Option<Paths>>>,
-    settings: &Rc<RefCell<Config>>,
-) {
+fn start_up(app: &LauncherWindow, state: &AppState) {
     let resolved = match Paths::resolve().and_then(|resolved| resolved.bootstrap().map(|()| resolved))
     {
         Ok(resolved) => resolved,
         Err(error) => {
-            *paths.borrow_mut() = None;
+            if let Ok(mut paths) = state.paths.lock() {
+                *paths = None;
+            }
             show_error(app, ErrorCode::Config, &error);
             return;
         }
     };
 
-    // Logging comes up before anything else can fail, so later errors leave a
-    // trace even though the window has no console to print to.
     if let Err(error) = logger::init(&resolved.logs_dir()) {
         show_error(app, ErrorCode::Config, &error);
     }
@@ -213,8 +341,6 @@ fn start_up(
             app.set_error_open(false);
             loaded
         }
-        // A broken config must not block startup: fall back to defaults, but say
-        // so rather than silently overwriting whatever the user had.
         Err(error) => {
             log::error!("설정을 불러오지 못해 기본값으로 시작합니다: {error:#}");
             show_error(app, ErrorCode::Config, &error);
@@ -222,20 +348,117 @@ fn start_up(
         }
     };
 
+    let secrets = match SecretStore::load(&resolved.secrets_file()) {
+        Ok(secrets) => secrets,
+        Err(error) => {
+            log::error!("계정 저장소를 불러오지 못했습니다: {error:#}");
+            show_error(app, ErrorCode::Login, &error);
+            SecretStore::new()
+        }
+    };
+
     app.set_target_fps(loaded.target_fps);
     app.set_adaptive_rendering(loaded.adaptive_rendering);
-    apply_accounts(app, &loaded);
 
-    *settings.borrow_mut() = loaded;
-    *paths.borrow_mut() = Some(resolved);
+    if let Ok(mut settings) = state.settings.lock() {
+        *settings = loaded;
+    }
+    if let Ok(mut stored) = state.secrets.lock() {
+        *stored = secrets;
+    }
+    if let Ok(mut paths) = state.paths.lock() {
+        *paths = Some(resolved);
+    }
+
+    apply_accounts(app, state);
 }
 
-fn apply_accounts(app: &LauncherWindow, settings: &Config) {
+fn start_login(app: &LauncherWindow, state: &AppState) {
+    let identity = match state.identity() {
+        Ok(identity) => identity,
+        Err(error) => {
+            show_error(app, ErrorCode::Login, &error);
+            return;
+        }
+    };
+
+    state.cancel.reset();
+
+    let cancel = state.cancel.clone();
+    let cache_dir = state.cache_dir();
+    let settings = Arc::clone(&state.settings);
+    let secrets = Arc::clone(&state.secrets);
+    let owner = state.clone();
+    let weak = app.as_weak();
+
+    task::spawn(app, ErrorCode::Login, move |reporter| {
+        reporter.progress(Stage::Auth, 0.0, "Microsoft 로그인 준비 중...");
+        let code = msa::request_device_code()?;
+
+        msa::open_in_browser(&code.direct_verification_uri())?;
+        reporter.progress(Stage::Auth, 0.2, "브라우저에서 로그인을 완료해 주세요.");
+
+        let token = msa::poll_for_token(&code, &cancel)?;
+        reporter.progress(Stage::Auth, 0.6, "계정을 확인하는 중...");
+
+        let mut session = Session::from_msa_token(identity, token)?;
+        session.verify_ownership()?;
+
+        reporter.progress(Stage::Auth, 0.8, "프로필을 불러오는 중...");
+        let profile = session.profile()?;
+
+        if let (Some(cache_dir), Some(skin_url)) = (cache_dir.as_deref(), profile.skin_url.as_ref())
+        {
+            reporter.progress(Stage::Auth, 0.9, "스킨을 불러오는 중...");
+            if let Err(error) = avatar::fetch_head(cache_dir, &profile.id, skin_url) {
+                log::warn!("스킨을 불러오지 못했습니다: {error:#}");
+            }
+        }
+
+        record_account(&settings, &secrets, &profile, session.refresh_token());
+        log::info!("로그인 완료: {} ({})", profile.name, profile.id);
+
+        let _ = weak.upgrade_in_event_loop(move |app| {
+            apply_accounts(&app, &owner);
+            persist_or_report(&owner, &app.as_weak());
+        });
+
+        Ok(())
+    });
+}
+
+fn record_account(
+    settings: &Arc<Mutex<Config>>,
+    secrets: &Arc<Mutex<SecretStore>>,
+    profile: &MinecraftProfile,
+    refresh_token: &str,
+) {
+    if let Ok(mut settings) = settings.lock() {
+        settings.upsert_account(AccountRecord {
+            id: profile.id.clone(),
+            name: profile.name.clone(),
+        });
+    }
+
+    if let Ok(mut secrets) = secrets.lock() {
+        secrets.upsert(profile.id.clone(), refresh_token);
+    }
+}
+
+fn apply_accounts(app: &LauncherWindow, state: &AppState) {
+    let settings = state.snapshot();
+    let cache_dir = state.cache_dir();
     let selected = settings.selected();
 
     app.set_signed_in(selected.is_some());
-    app.set_account_name(selected.map(|a| a.name.clone()).unwrap_or_default().into());
-    app.set_account_initial(selected.map(|a| a.initial()).unwrap_or_default().into());
+    app.set_account_name(
+        selected
+            .map(|account| account.name.clone())
+            .unwrap_or_default()
+            .into(),
+    );
+    app.set_account_initial(selected.map(AccountRecord::initial).unwrap_or_default().into());
+    app.set_account_avatar(load_avatar(cache_dir.as_deref(), selected.map(|a| a.id.as_str())));
 
     let others: Vec<Account> = settings
         .others()
@@ -244,25 +467,32 @@ fn apply_accounts(app: &LauncherWindow, settings: &Config) {
             id: record.id.clone().into(),
             name: record.name.clone().into(),
             initial: record.initial().into(),
-            avatar: slint::Image::default(),
+            avatar: load_avatar(cache_dir.as_deref(), Some(&record.id)),
         })
         .collect();
 
     app.set_other_accounts(slint::ModelRc::new(slint::VecModel::from(others)));
+    app.set_status_hint(if selected.is_some() {
+        "".into()
+    } else {
+        "시작하려면 먼저 로그인해 주세요".into()
+    });
 }
 
-fn save_settings(
-    paths: &Rc<RefCell<Option<Paths>>>,
-    settings: &Rc<RefCell<Config>>,
-    app: &slint::Weak<LauncherWindow>,
-) {
-    let Some(path) = paths.borrow().as_ref().map(Paths::config_file) else {
-        return;
-    };
-    let snapshot = settings.borrow().clone();
+fn load_avatar(cache_dir: Option<&Path>, id: Option<&str>) -> slint::Image {
+    let head = cache_dir
+        .zip(id)
+        .and_then(|(dir, id)| avatar::load_cached(dir, id));
 
-    if let Err(error) = snapshot.save(&path) {
-        log::error!("설정 저장 실패: {error:#}");
+    match head {
+        Some(head) => avatar::to_image(&head),
+        None => slint::Image::default(),
+    }
+}
+
+fn persist_or_report(state: &AppState, app: &slint::Weak<LauncherWindow>) {
+    if let Err(error) = state.persist() {
+        log::error!("저장 실패: {error:#}");
 
         if let Some(app) = app.upgrade() {
             show_error(&app, ErrorCode::Config, &error);

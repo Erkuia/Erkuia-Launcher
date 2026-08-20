@@ -25,6 +25,10 @@ impl Cancel {
         self.0.store(true, Ordering::SeqCst);
     }
 
+    pub fn reset(&self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+
     pub fn is_cancelled(&self) -> bool {
         self.0.load(Ordering::SeqCst)
     }
