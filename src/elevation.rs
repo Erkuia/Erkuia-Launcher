@@ -26,6 +26,16 @@ pub fn run_after_install_from_args() -> Option<bool> {
     bool_after_arg("--run-after-install")
 }
 
+/// Physical screen position the pre-elevation window was sitting at, so the
+/// elevated process can reopen exactly where the user left it instead of
+/// jumping back to the default spot.
+pub fn window_position_from_args() -> Option<(i32, i32)> {
+    let x = value_after_arg("--window-x")?.parse().ok()?;
+    let y = value_after_arg("--window-y")?.parse().ok()?;
+
+    Some((x, y))
+}
+
 pub fn is_running_as_admin() -> anyhow::Result<bool> {
     let output = powershell::output(&[
             "-NoProfile",
@@ -46,6 +56,7 @@ pub fn restart_as_admin_for_install(
     install_dir: &str,
     create_desktop_shortcut: bool,
     run_after_install: bool,
+    window_position: (i32, i32),
 ) -> anyhow::Result<()> {
     let args = vec![
         ELEVATED_INSTALL_FLAG.to_string(),
@@ -55,6 +66,10 @@ pub fn restart_as_admin_for_install(
         create_desktop_shortcut.to_string(),
         "--run-after-install".to_string(),
         run_after_install.to_string(),
+        "--window-x".to_string(),
+        window_position.0.to_string(),
+        "--window-y".to_string(),
+        window_position.1.to_string(),
     ];
 
     start_elevated(&args)

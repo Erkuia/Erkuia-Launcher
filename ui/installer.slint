@@ -19,6 +19,19 @@ global Theme {
     out property <color> frame-border: #d5d8db;
 }
 
+component CheckGlyph inherits Path {
+    in property <brush> color: #ffffff;
+    in property <length> thickness: 2px;
+
+    viewbox-x: 0;
+    viewbox-y: 0;
+    viewbox-width: 16;
+    viewbox-height: 16;
+    commands: "M 3.6 8.3 L 6.6 11.4 L 12.6 4.8";
+    stroke: root.color;
+    stroke-width: root.thickness;
+}
+
 component StepItem inherits VerticalLayout {
     in property <string> label;
     in property <int> number;
@@ -32,21 +45,25 @@ component StepItem inherits VerticalLayout {
         spacing: 11px;
         alignment: start;
 
-        Rectangle {
-            width: 22px;
-            height: 22px;
-            border-radius: 11px;
-            border-width: 1.5px;
-            border-color: (root.active || root.done) ? Theme.accent : Theme.step-idle-border;
-            background: (root.active || root.done) ? Theme.accent : transparent;
+        VerticalLayout {
+            alignment: center;
 
-            Text {
-                text: root.number;
-                color: (root.active || root.done) ? #ffffff : Theme.step-idle-text;
-                font-size: 10px;
-                font-weight: 700;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            Rectangle {
+                width: 22px;
+                height: 22px;
+                border-radius: 11px;
+                border-width: 1.5px;
+                border-color: (root.active || root.done) ? Theme.accent : Theme.step-idle-border;
+                background: (root.active || root.done) ? Theme.accent : transparent;
+
+                Text {
+                    text: root.number;
+                    color: (root.active || root.done) ? #ffffff : Theme.step-idle-text;
+                    font-size: 10px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
             }
         }
 
@@ -184,21 +201,20 @@ component OptionCheckBox inherits Rectangle {
         spacing: 10px;
         alignment: start;
 
-        Rectangle {
-            width: 18px;
-            height: 18px;
-            border-radius: 5px;
-            border-width: 1.5px;
-            border-color: root.checked ? Theme.accent : Theme.step-idle-border;
-            background: root.checked ? Theme.accent : #ffffff;
+        VerticalLayout {
+            alignment: center;
 
-            Text {
-                text: root.checked ? "✓" : "";
-                color: #ffffff;
-                font-size: 11px;
-                font-weight: 800;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            Rectangle {
+                width: 18px;
+                height: 18px;
+                border-radius: 5px;
+                border-width: 1.5px;
+                border-color: root.checked ? Theme.accent : Theme.step-idle-border;
+                background: root.checked ? Theme.accent : #ffffff;
+
+                if root.checked: CheckGlyph {
+                    thickness: 2.1px;
+                }
             }
         }
 
@@ -280,11 +296,15 @@ component TitleBar inherits Rectangle {
         spacing: 0px;
         padding-left: 14px;
 
-        Image {
-            width: 16px;
-            height: 16px;
-            image-fit: contain;
-            source: @image-url("../assets/rendog-logo-32.png");
+        VerticalLayout {
+            alignment: center;
+
+            Image {
+                width: 16px;
+                height: 16px;
+                image-fit: contain;
+                source: @image-url("../assets/rendog-logo-32.png");
+            }
         }
 
         Rectangle {
@@ -346,20 +366,24 @@ component Sidebar inherits Rectangle {
             spacing: 11px;
             alignment: start;
 
-            Rectangle {
-                width: 38px;
-                height: 38px;
-                border-radius: 9px;
-                border-width: 1px;
-                border-color: #dbdee2;
-                background: #ffffff;
-                clip: true;
+            VerticalLayout {
+                alignment: center;
 
-                Image {
-                    width: 30px;
-                    height: 30px;
-                    image-fit: contain;
-                    source: @image-url("../assets/rendog-logo-96.png");
+                Rectangle {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 9px;
+                    border-width: 1px;
+                    border-color: #dbdee2;
+                    background: #ffffff;
+                    clip: true;
+
+                    Image {
+                        width: 30px;
+                        height: 30px;
+                        image-fit: contain;
+                        source: @image-url("../assets/rendog-logo-96.png");
+                    }
                 }
             }
 
@@ -708,13 +732,10 @@ component CompletePage inherits Rectangle {
                 border-radius: 25px;
                 background: Theme.accent;
 
-                Text {
-                    text: "✓";
-                    color: #ffffff;
-                    font-size: 24px;
-                    font-weight: 800;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                CheckGlyph {
+                    width: 26px;
+                    height: 26px;
+                    thickness: 2.2px;
                 }
             }
         }

@@ -20,12 +20,17 @@ mod uninstall;
 
 slint::include_modules!();
 
+/// Where inside the title bar the drag started, in logical pixels.
+///
+/// The window position is deliberately NOT captured here. `TouchArea` reports
+/// pointer coordinates relative to the window, so once the window has moved the
+/// pointer reads back closer to the grab offset again. Anchoring every frame to
+/// the position captured at press time therefore makes the window oscillate
+/// between two spots; anchoring to the *current* position converges instead.
 #[derive(Clone, Copy)]
 struct TitleDragState {
-    window_position: PhysicalPosition,
     pointer_x: f32,
     pointer_y: f32,
-    scale_factor: f32,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -65,12 +70,10 @@ fn main() -> anyhow::Result<()> {
         let app = app.as_weak();
         let title_drag_state = Rc::clone(&title_drag_state);
         move |pointer_x, pointer_y| {
-            if let Some(app) = app.upgrade() {
+            if app.upgrade().is_some() {
                 *title_drag_state.borrow_mut() = Some(TitleDragState {
-                    window_position: app.window().position(),
                     pointer_x,
                     pointer_y,
-                    scale_factor: app.window().scale_factor(),
                 });
             }
         }
@@ -81,11 +84,19 @@ fn main() -> anyhow::Result<()> {
         let title_drag_state = Rc::clone(&title_drag_state);
         move |pointer_x, pointer_y| {
             if let (Some(app), Some(state)) = (app.upgrade(), *title_drag_state.borrow()) {
-                let delta_x = ((pointer_x - state.pointer_x) * state.scale_factor).round() as i32;
-                let delta_y = ((pointer_y - state.pointer_y) * state.scale_factor).round() as i32;
-                app.window().set_position(PhysicalPosition::new(
-                    state.window_position.x + delta_x,
-                    state.window_position.y + delta_y,
+                let window = app.window();
+                let scale_factor = window.scale_factor();
+                let delta_x = ((pointer_x - state.pointer_x) * scale_factor).round() as i32;
+                let delta_y = ((pointer_y - state.pointer_y) * scale_factor).round() as i32;
+
+                if delta_x == 0 && delta_y == 0 {
+                    return;
+                }
+
+                let current = window.position();
+                window.set_position(PhysicalPosition::new(
+                    current.x + delta_x,
+                    current.y + delta_y,
                 ));
             }
         }
@@ -144,10 +155,13 @@ fn main() -> anyhow::Result<()> {
             // job to a hidden background process, relaunch this same UI elevated
             // and let it resume straight at the install step.
             if manifest.installer.requires_admin_on_install && !is_admin {
+                let position = app.window().position();
+
                 match elevation::restart_as_admin_for_install(
                     &app.get_install_path(),
                     app.get_create_desktop_shortcut(),
                     app.get_run_after_install(),
+                    (position.x, position.y),
                 ) {
                     Ok(()) => {
                         let _ = app.hide();
@@ -220,10 +234,20 @@ fn main() -> anyhow::Result<()> {
                 .unwrap_or(manifest.installer.default_run_after_install),
         );
 
+        let restored_position = elevation::window_position_from_args();
+        if let Some((x, y)) = restored_position {
+            app.window().set_position(PhysicalPosition::new(x, y));
+        }
+
         let app_weak = app.as_weak();
         let manifest = Arc::clone(&manifest);
         slint::Timer::single_shot(Duration::from_millis(80), move || {
             if let Some(app) = app_weak.upgrade() {
+                // Re-apply once the window is actually mapped; some window
+                // managers place a freshly shown window themselves.
+                if let Some((x, y)) = restored_position {
+                    app.window().set_position(PhysicalPosition::new(x, y));
+                }
                 begin_install(&app, Arc::clone(&manifest));
             }
         });
