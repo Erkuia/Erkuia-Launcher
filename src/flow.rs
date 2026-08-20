@@ -14,6 +14,7 @@ use crate::{
 };
 
 pub const REQUIRED_JAVA: u32 = 21;
+pub const GAME_LOG_FILE: &str = "minecraft.log";
 
 pub struct LaunchOutcome {
     pub child: Child,
@@ -95,6 +96,8 @@ pub fn run(
     let natives_dir = launch::natives_version_dir(&paths.natives_dir(), &plan.version.id);
     launch::extract_natives(&minecraft_dir, &plan.version.natives, &natives_dir)?;
 
+    let log_path = paths.logs_dir().join(GAME_LOG_FILE);
+
     let inputs = LaunchInputs {
         minecraft_dir: &minecraft_dir,
         natives_dir: &natives_dir,
@@ -107,10 +110,11 @@ pub fn run(
         access_token: &token.access_token,
         heap_megabytes: launch::detect_heap_megabytes(),
         launcher_version: env!("CARGO_PKG_VERSION"),
+        log_path: &log_path,
     };
 
     reporter.progress(Stage::Launch, 0.6, "Minecraft 를 실행하는 중...");
-    let child = launch::spawn(launch::build_command(&inputs))?;
+    let child = launch::spawn(launch::build_command(&inputs)?, &log_path)?;
 
     reporter.progress(Stage::Launch, 1.0, "실행됐어요.");
 

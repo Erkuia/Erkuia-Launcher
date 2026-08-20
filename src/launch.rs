@@ -163,6 +163,7 @@ pub struct LaunchInputs<'a> {
     pub access_token: &'a str,
     pub heap_megabytes: u32,
     pub launcher_version: &'a str,
+    pub log_path: &'a Path,
 }
 
 pub fn jvm_arguments(inputs: &LaunchInputs<'_>) -> Vec<String> {
@@ -223,7 +224,25 @@ pub fn game_arguments(inputs: &LaunchInputs<'_>) -> Vec<String> {
     ]
 }
 
-pub fn build_command(inputs: &LaunchInputs<'_>) -> Command {
+fn output_file(path: &Path) -> anyhow::Result<std::fs::File> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("{} 폴더를 만들지 못했어요.", parent.display()))?;
+    }
+
+    std::fs::File::create(path)
+        .with_context(|| format!("{} 을(를) 만들지 못했어요.", path.display()))
+}
+
+/// The launcher exits as soon as the game is up, so nothing would be left to
+/// drain a pipe. Minecraft writes far more than a pipe buffer holds during
+/// startup and would block forever on a full one, so both streams go to a file.
+pub fn build_command(inputs: &LaunchInputs<'_>) -> anyhow::Result<Command> {
+    let log = output_file(inputs.log_path)?;
+    let errors = log
+        .try_clone()
+        .context("게임 로그 파일을 열어두지 못했어요.")?;
+
     let mut command = Command::new(inputs.java.javaw());
 
     command
@@ -231,17 +250,17 @@ pub fn build_command(inputs: &LaunchInputs<'_>) -> Command {
         .args(jvm_arguments(inputs))
         .arg(&inputs.loader.main_class)
         .args(game_arguments(inputs))
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::from(log))
+        .stderr(Stdio::from(errors))
         .stdin(Stdio::null());
 
-    command
+    Ok(command)
 }
 
 /// A broken classpath or a missing native shows up within a second or two, so a
 /// short watch catches the failures worth reporting without keeping the
 /// launcher resident for the whole session.
-pub fn spawn(mut command: Command) -> anyhow::Result<Child> {
+pub fn spawn(mut command: Command, log_path: &Path) -> anyhow::Result<Child> {
     let mut child = command
         .spawn()
         .context("Minecraft 를 실행하지 못했어요. Java 설치를 확인해 주세요.")?;
@@ -251,19 +270,15 @@ pub fn spawn(mut command: Command) -> anyhow::Result<Child> {
     while started.elapsed() < EARLY_EXIT_GRACE {
         match child.try_wait() {
             Ok(Some(status)) => {
-                let detail = child
-                    .stderr
-                    .take()
-                    .map(|mut stderr| {
-                        let mut text = String::new();
-                        std::io::Read::read_to_string(&mut stderr, &mut text).ok();
-                        text
-                    })
-                    .unwrap_or_default();
+                let detail = std::fs::read_to_string(log_path).unwrap_or_default();
 
                 log::error!("Minecraft 조기 종료 ({status})\n{detail}");
 
-                bail!("{}", describe_exit(status.code(), &detail));
+                bail!(
+                    "{}\n자세한 기록: {}",
+                    describe_exit(status.code(), &detail),
+                    log_path.display()
+                );
             }
             Ok(None) => std::thread::sleep(EARLY_EXIT_POLL),
             Err(error) => {
@@ -273,7 +288,11 @@ pub fn spawn(mut command: Command) -> anyhow::Result<Child> {
         }
     }
 
-    log::info!("Minecraft 실행 확인 (pid {})", child.id());
+    log::info!(
+        "Minecraft 실행 확인 (pid {}) · 기록 {}",
+        child.id(),
+        log_path.display()
+    );
 
     Ok(child)
 }
@@ -281,6 +300,8 @@ pub fn spawn(mut command: Command) -> anyhow::Result<Child> {
 pub fn describe_exit(code: Option<i32>, detail: &str) -> String {
     let tail: String = detail
         .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
         .rev()
         .take(3)
         .collect::<Vec<_>>()
@@ -365,6 +386,7 @@ mod tests {
             access_token: "TOKEN",
             heap_megabytes: 4096,
             launcher_version: "0.1.0",
+            log_path: Path::new("/mc/logs/minecraft.log"),
         }
     }
 
@@ -542,6 +564,27 @@ mod tests {
     #[test]
     fn a_terminated_process_is_reported_without_a_code() {
         assert!(describe_exit(None, "").contains("예기치 않게"));
+    }
+
+    #[test]
+    fn the_tail_skips_blank_lines() {
+        let message = describe_exit(Some(1), "real cause\n\n\n   \n");
+
+        assert!(message.contains("real cause"));
+    }
+
+    #[test]
+    fn both_streams_land_in_the_same_file_so_neither_can_block() {
+        let dir = std::env::temp_dir().join(format!("rendog-launch-log-{}", std::process::id()));
+        let path = dir.join("logs").join("minecraft.log");
+
+        let first = output_file(&path).unwrap();
+        let second = first.try_clone().unwrap();
+
+        assert!(path.is_file());
+        drop((first, second));
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
