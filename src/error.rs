@@ -1,18 +1,5 @@
-//! Turning internal failures into something the UI can show.
-//!
-//! Internally the launcher uses `anyhow` like the installer does. An
-//! `anyhow::Error` carries a full context chain, which is what belongs in the
-//! log — but not on screen. [`UserError`] is the narrowed form: a stable code
-//! plus one Korean sentence.
-
 use std::fmt;
 
-/// Where a failure came from. The code is shown next to the message so a user
-/// can report it without pasting a log.
-///
-/// The full set is declared up front so codes stay stable across phases; the
-/// variants for flows that do not exist yet (login, mods, launch, update) are
-/// wired up as those phases land.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorCode {
@@ -40,7 +27,6 @@ impl ErrorCode {
         }
     }
 
-    /// Fallback sentence when a failure has no better message of its own.
     pub fn default_message(self) -> &'static str {
         match self {
             Self::Config => "설정을 불러오지 못했어요.",
@@ -61,7 +47,6 @@ impl fmt::Display for ErrorCode {
     }
 }
 
-/// A failure that is safe to put on screen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserError {
     pub code: ErrorCode,
@@ -82,10 +67,6 @@ impl UserError {
         }
     }
 
-    /// Narrow an `anyhow::Error` for display.
-    ///
-    /// Only the outermost context is used: that is the layer that knows what the
-    /// user was trying to do. The full chain should go to the log separately.
     pub fn from_error(code: ErrorCode, error: &anyhow::Error) -> Self {
         Self::new(code, error.to_string())
     }
@@ -108,7 +89,10 @@ mod tests {
         let user_error = UserError::from_error(ErrorCode::Download, &error);
 
         assert_eq!(user_error.code, ErrorCode::Download);
-        assert_eq!(user_error.message, "RendogClient-Delta.jar 다운로드에 실패했어요.");
+        assert_eq!(
+            user_error.message,
+            "RendogClient-Delta.jar 다운로드에 실패했어요."
+        );
     }
 
     #[test]

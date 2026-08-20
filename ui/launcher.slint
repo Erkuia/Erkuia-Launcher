@@ -1,17 +1,8 @@
-// Rendog Launcher UI root.
-//
-// Scaffolding only (L0-1). The design tokens (L1-1), the frameless custom
-// title bar (L1-2) and the real screens (Phase 2) land in later tasks, so this
-// window still uses the default OS frame on purpose: dropping the frame before
-// the custom title bar exists would leave the window impossible to move or
-// close.
-
 export component LauncherWindow inherits Window {
     in-out property <string> product-name: "Rendog Launcher";
     in-out property <string> launcher-version: "v0.1.0";
     in-out property <string> server-address: "rendog.kr";
     in-out property <string> minecraft-version: "1.20.4";
-    // Shown read-only as "프로그램 디렉토리" in the settings modal (L2-4).
     in-out property <string> program-directory: "";
     in-out property <string> data-directory: "";
 
@@ -46,8 +37,6 @@ export component LauncherWindow inherits Window {
             horizontal-alignment: center;
         }
 
-        // Scaffolding only: confirms the resolved layout at a glance until the
-        // settings modal (L2-4) gives these a real home.
         Text {
             text: "프로그램 " + root.program-directory;
             color: #83868a;

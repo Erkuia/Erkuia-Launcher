@@ -10,7 +10,6 @@ use error::{ErrorCode, UserError};
 slint::include_modules!();
 
 fn main() -> anyhow::Result<()> {
-    // Matches the installer so both windows render with the same widget style.
     std::env::set_var("SLINT_STYLE", "fluent-light");
 
     let paths = paths::Paths::resolve()
@@ -33,10 +32,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Log the narrowed failure and hand the original error back untouched, so the
-/// full context chain still reaches the caller.
 fn report(code: ErrorCode, error: &anyhow::Error) -> anyhow::Error {
-    // Replaced by the rolling file log in L3-3.
     eprintln!("{}", UserError::from_error(code, error));
 
     anyhow::anyhow!("{error:#}")
