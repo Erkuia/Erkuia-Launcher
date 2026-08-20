@@ -509,15 +509,16 @@ component PathPage inherits Rectangle {
     in-out property <string> install-path;
     in property <string> capacity-text;
     callback install-clicked();
+    callback back-clicked();
     callback browse-clicked();
 
     background: transparent;
 
     VerticalLayout {
         padding-top: 44px;
+        padding-bottom: 44px;
         padding-left: 50px;
         padding-right: 50px;
-        alignment: start;
         spacing: 0px;
 
         Text {
@@ -572,12 +573,30 @@ component PathPage inherits Rectangle {
         }
 
         Rectangle {
-            height: 30px;
+            background: transparent;
+            vertical-stretch: 1;
+        }
+
+        Rectangle {
+            height: 1px;
+            background: #e8eaee;
+        }
+
+        Rectangle {
+            height: 18px;
             background: transparent;
         }
 
         HorizontalLayout {
-            alignment: start;
+            alignment: end;
+            spacing: 14px;
+
+            TextButton {
+                text: "이전";
+                clicked => {
+                    root.back-clicked();
+                }
+            }
 
             PrimaryButton {
                 text: "설치";
@@ -670,7 +689,6 @@ component CompletePage inherits Rectangle {
     in-out property <bool> create-desktop-shortcut;
     in-out property <bool> run-after-install;
     in property <string> product-name;
-    callback launch-clicked();
     callback close-clicked();
 
     background: transparent;
@@ -759,17 +777,9 @@ component CompletePage inherits Rectangle {
 
         HorizontalLayout {
             alignment: start;
-            spacing: 6px;
 
             PrimaryButton {
-                text: "지금 실행";
-                clicked => {
-                    root.launch-clicked();
-                }
-            }
-
-            TextButton {
-                text: "닫기";
+                text: "종료";
                 clicked => {
                     root.close-clicked();
                 }
@@ -889,8 +899,8 @@ export component InstallerWindow inherits Window {
 
     callback start-clicked();
     callback install-clicked();
+    callback back-clicked();
     callback retry-clicked();
-    callback launch-clicked();
     callback close-clicked();
     callback browse-clicked();
     callback title-drag-started(float, float);
@@ -958,6 +968,9 @@ export component InstallerWindow inherits Window {
                         install-clicked => {
                             root.install-clicked();
                         }
+                        back-clicked => {
+                            root.back-clicked();
+                        }
                         browse-clicked => {
                             root.browse-clicked();
                         }
@@ -972,9 +985,6 @@ export component InstallerWindow inherits Window {
                         product-name: root.product-name;
                         create-desktop-shortcut <=> root.create-desktop-shortcut;
                         run-after-install <=> root.run-after-install;
-                        launch-clicked => {
-                            root.launch-clicked();
-                        }
                         close-clicked => {
                             root.close-clicked();
                         }

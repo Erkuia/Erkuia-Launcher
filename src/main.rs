@@ -153,10 +153,11 @@ fn main() -> anyhow::Result<()> {
                         let _ = app.hide();
                         slint::quit_event_loop().ok();
                     }
-                    Err(error) => {
-                        app.set_error_code("ADMIN_REQUIRED".into());
-                        app.set_error_message(error.to_string().into());
-                        app.set_current_step(state::Step::Error.index());
+                    Err(_) => {
+                        // Declining the UAC prompt is a normal answer, not a
+                        // failure: stay on the path page so the user can simply
+                        // press 설치 again.
+                        app.set_current_step(state::Step::InstallPath.index());
                     }
                 }
                 return;
@@ -166,15 +167,12 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
-    app.on_launch_clicked({
+    app.on_back_clicked({
         let app = app.as_weak();
-        let title_drag_state = Rc::clone(&title_drag_state);
         move || {
-            *title_drag_state.borrow_mut() = None;
             if let Some(app) = app.upgrade() {
-                finish_installer(&app, true, is_admin);
+                app.set_current_step(state::Step::Welcome.index());
             }
-            slint::quit_event_loop().ok();
         }
     });
 
