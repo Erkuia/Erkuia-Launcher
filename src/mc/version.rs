@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use anyhow::{bail, Context};
 use serde::Deserialize;
 
+use crate::hash::Checksum;
+
 pub const VERSION_MANIFEST_URL: &str =
     "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 
@@ -174,7 +176,7 @@ impl Library {
 pub struct DownloadTarget {
     pub url: String,
     pub relative_path: String,
-    pub sha1: Option<String>,
+    pub checksum: Option<Checksum>,
     pub size: u64,
     pub name: Option<String>,
 }
@@ -224,7 +226,7 @@ fn target_from(artifact: &Artifact, name: &str, classifier: Option<&str>) -> Opt
     Some(DownloadTarget {
         url: artifact.url.clone(),
         relative_path: format!("libraries/{relative_path}"),
-        sha1: Some(artifact.sha1.clone()),
+        checksum: Some(Checksum::Sha1(artifact.sha1.clone())),
         size: artifact.size,
         name: Some(name.to_string()),
     })
@@ -262,7 +264,7 @@ impl VersionDetail {
         let client = DownloadTarget {
             url: self.downloads.client.url.clone(),
             relative_path: format!("versions/{}/{}.jar", self.id, self.id),
-            sha1: Some(self.downloads.client.sha1.clone()),
+            checksum: Some(Checksum::Sha1(self.downloads.client.sha1.clone())),
             size: self.downloads.client.size,
             name: None,
         };
@@ -434,7 +436,7 @@ mod tests {
         let plan = detail("").plan(WINDOWS).unwrap();
 
         assert_eq!(plan.client.relative_path, "versions/1.20.4/1.20.4.jar");
-        assert_eq!(plan.client.sha1.as_deref(), Some("bbbb"));
+        assert_eq!(plan.client.checksum, Some(Checksum::Sha1("bbbb".to_string())));
         assert_eq!(plan.java_major, 17);
     }
 
@@ -461,7 +463,7 @@ mod tests {
         let plan = detail(libraries).plan(WINDOWS).unwrap();
 
         assert_eq!(plan.libraries.len(), 1);
-        assert_eq!(plan.libraries[0].sha1.as_deref(), Some("1"));
+        assert_eq!(plan.libraries[0].checksum, Some(Checksum::Sha1("1".to_string())));
     }
 
     #[test]
@@ -510,7 +512,7 @@ mod tests {
 
         assert_eq!(plan.libraries.len(), 1);
         assert_eq!(plan.natives.len(), 1);
-        assert_eq!(plan.natives[0].sha1.as_deref(), Some("9"));
+        assert_eq!(plan.natives[0].checksum, Some(Checksum::Sha1("9".to_string())));
     }
 
     #[test]

@@ -14,6 +14,7 @@ use slint::{PhysicalPosition, TimerMode};
 mod auth;
 mod config;
 mod error;
+mod hash;
 mod http;
 mod logger;
 mod manifest;

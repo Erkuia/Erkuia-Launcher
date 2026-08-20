@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use anyhow::{bail, Context};
 use serde::Deserialize;
 
-use crate::mc::version::{AssetIndexRef, DownloadTarget};
+use crate::{hash::Checksum, mc::version::{AssetIndexRef, DownloadTarget}};
 
 pub const RESOURCE_BASE: &str = "https://resources.download.minecraft.net";
 
@@ -54,7 +54,7 @@ impl AssetIndex {
             targets.push(DownloadTarget {
                 url: object_url(&object.hash),
                 relative_path: object_path(&object.hash),
-                sha1: Some(object.hash.clone()),
+                checksum: Some(Checksum::Sha1(object.hash.clone())),
                 size: object.size,
                 name: None,
             });
@@ -80,7 +80,7 @@ pub fn index_target(reference: &AssetIndexRef) -> DownloadTarget {
     DownloadTarget {
         url: reference.url.clone(),
         relative_path: index_path(&reference.id),
-        sha1: Some(reference.sha1.clone()),
+        checksum: Some(Checksum::Sha1(reference.sha1.clone())),
         size: reference.size,
         name: None,
     }

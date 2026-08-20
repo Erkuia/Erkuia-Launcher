@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use anyhow::{bail, Context};
 use serde::Deserialize;
 
-use crate::mc::version::{maven_key, maven_path, DownloadTarget};
+use crate::{hash::Checksum, mc::version::{maven_key, maven_path, DownloadTarget}};
 
 pub const META_BASE: &str = "https://meta.fabricmc.net/v2";
 pub const DEFAULT_MAVEN: &str = "https://maven.fabricmc.net/";
@@ -85,7 +85,7 @@ impl ProfileLibrary {
         Some(DownloadTarget {
             url: format!("{}{path}", maven_base(self.url.as_deref())),
             relative_path: format!("libraries/{path}"),
-            sha1: self.sha1.clone(),
+            checksum: self.sha1.clone().map(Checksum::Sha1),
             size: self.size.unwrap_or(0),
             name: Some(self.name.clone()),
         })
@@ -204,7 +204,7 @@ mod tests {
         DownloadTarget {
             url: format!("https://libraries.minecraft.net/{path}"),
             relative_path: format!("libraries/{path}"),
-            sha1: Some("a".repeat(40)),
+            checksum: Some(Checksum::Sha1("a".repeat(40))),
             size: 1,
             name: Some(name.to_string()),
         }
@@ -274,7 +274,7 @@ mod tests {
         let profile: Profile = serde_json::from_str(PROFILE).unwrap();
         let plan = profile.plan("0.15.11");
 
-        assert!(plan.libraries.iter().all(|target| target.sha1.is_none()));
+        assert!(plan.libraries.iter().all(|target| target.checksum.is_none()));
     }
 
     #[test]

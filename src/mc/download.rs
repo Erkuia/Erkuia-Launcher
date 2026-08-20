@@ -26,7 +26,13 @@ pub struct Stats {
     pub bytes: u64,
 }
 
-pub fn is_present(root: &Path, target: &DownloadTarget) -> bool {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Verify {
+    Size,
+    Checksum,
+}
+
+pub fn is_present(root: &Path, target: &DownloadTarget, verify: Verify) -> bool {
     let path = root.join(&target.relative_path);
 
     let Ok(metadata) = path.metadata() else {
@@ -37,7 +43,14 @@ pub fn is_present(root: &Path, target: &DownloadTarget) -> bool {
         return false;
     }
 
-    target.size == 0 || metadata.len() == target.size
+    if target.size != 0 && metadata.len() != target.size {
+        return false;
+    }
+
+    match (verify, &target.checksum) {
+        (Verify::Checksum, Some(checksum)) => checksum.matches_file(&path),
+        _ => true,
+    }
 }
 
 pub fn total_bytes(targets: &[DownloadTarget]) -> u64 {
@@ -83,6 +96,17 @@ fn store(root: &Path, target: &DownloadTarget) -> anyhow::Result<u64> {
         );
     }
 
+    if let Some(checksum) = &target.checksum {
+        if !checksum.matches_file(&temp) {
+            std::fs::remove_file(&temp).ok();
+            bail!(
+                "{} {} 검증에 실패했어요.",
+                target.relative_path,
+                checksum.algorithm()
+            );
+        }
+    }
+
     std::fs::rename(&temp, &path)
         .with_context(|| format!("{} 을(를) 배치하지 못했어요.", target.relative_path))?;
 
@@ -96,6 +120,7 @@ pub fn run(
     reporter: &Reporter,
     cancel: &Cancel,
     concurrency: usize,
+    verify: Verify,
 ) -> anyhow::Result<Stats> {
     if targets.is_empty() {
         return Ok(Stats::default());
@@ -143,7 +168,7 @@ pub fn run(
 
                 let target = &targets[index];
 
-                if is_present(root, target) {
+                if is_present(root, target, verify) {
                     skipped.fetch_add(1, Ordering::Relaxed);
                     done_bytes.fetch_add(target.size, Ordering::Relaxed);
                 } else {
@@ -241,7 +266,7 @@ mod tests {
         DownloadTarget {
             url: format!("https://example.invalid/{path}"),
             relative_path: path.to_string(),
-            sha1: None,
+            checksum: None,
             size,
             name: None,
         }
@@ -257,7 +282,7 @@ mod tests {
     fn a_missing_file_is_not_present() {
         let dir = TempDir::new("missing");
 
-        assert!(!is_present(&dir.0, &target("libraries/a.jar", 4)));
+        assert!(!is_present(&dir.0, &target("libraries/a.jar", 4), Verify::Size));
     }
 
     #[test]
@@ -265,7 +290,7 @@ mod tests {
         let dir = TempDir::new("match");
         write(&dir.0, "libraries/a.jar", b"abcd");
 
-        assert!(is_present(&dir.0, &target("libraries/a.jar", 4)));
+        assert!(is_present(&dir.0, &target("libraries/a.jar", 4), Verify::Size));
     }
 
     #[test]
@@ -273,7 +298,7 @@ mod tests {
         let dir = TempDir::new("short");
         write(&dir.0, "libraries/a.jar", b"ab");
 
-        assert!(!is_present(&dir.0, &target("libraries/a.jar", 4)));
+        assert!(!is_present(&dir.0, &target("libraries/a.jar", 4), Verify::Size));
     }
 
     #[test]
@@ -281,7 +306,7 @@ mod tests {
         let dir = TempDir::new("unknown");
         write(&dir.0, "libraries/a.jar", b"anything");
 
-        assert!(is_present(&dir.0, &target("libraries/a.jar", 0)));
+        assert!(is_present(&dir.0, &target("libraries/a.jar", 0), Verify::Size));
     }
 
     #[test]
@@ -289,7 +314,65 @@ mod tests {
         let dir = TempDir::new("dir");
         std::fs::create_dir_all(dir.0.join("libraries/a.jar")).unwrap();
 
-        assert!(!is_present(&dir.0, &target("libraries/a.jar", 0)));
+        assert!(!is_present(&dir.0, &target("libraries/a.jar", 0), Verify::Size));
+    }
+
+    #[test]
+    fn size_mode_accepts_a_file_with_a_wrong_hash() {
+        let dir = TempDir::new("size-mode");
+        write(&dir.0, "libraries/a.jar", b"abc");
+
+        let mut target = target("libraries/a.jar", 3);
+        target.checksum = Some(crate::hash::Checksum::Sha1("0".repeat(40)));
+
+        assert!(is_present(&dir.0, &target, Verify::Size));
+    }
+
+    #[test]
+    fn checksum_mode_rejects_a_file_with_a_wrong_hash() {
+        let dir = TempDir::new("hash-bad");
+        write(&dir.0, "libraries/a.jar", b"abc");
+
+        let mut target = target("libraries/a.jar", 3);
+        target.checksum = Some(crate::hash::Checksum::Sha1("0".repeat(40)));
+
+        assert!(!is_present(&dir.0, &target, Verify::Checksum));
+    }
+
+    #[test]
+    fn checksum_mode_accepts_a_matching_file() {
+        let dir = TempDir::new("hash-ok");
+        write(&dir.0, "libraries/a.jar", b"abc");
+
+        let mut target = target("libraries/a.jar", 3);
+        target.checksum = Some(crate::hash::Checksum::Sha1(
+            "a9993e364706816aba3e25717850c26c9cd0d89d".to_string(),
+        ));
+
+        assert!(is_present(&dir.0, &target, Verify::Checksum));
+    }
+
+    #[test]
+    fn checksum_mode_accepts_a_file_that_has_no_hash_to_check() {
+        let dir = TempDir::new("hash-none");
+        write(&dir.0, "libraries/a.jar", b"abc");
+
+        assert!(is_present(
+            &dir.0,
+            &target("libraries/a.jar", 3),
+            Verify::Checksum
+        ));
+    }
+
+    #[test]
+    fn a_wrong_size_fails_in_either_mode() {
+        let dir = TempDir::new("size-guard");
+        write(&dir.0, "libraries/a.jar", b"ab");
+
+        let target = target("libraries/a.jar", 3);
+
+        assert!(!is_present(&dir.0, &target, Verify::Size));
+        assert!(!is_present(&dir.0, &target, Verify::Checksum));
     }
 
     #[test]
