@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "launcher": {
+    "version": "0.1.0",
+    "url": "https://github.com/foliq/Rendog-Launcher/releases/latest/download/RendogLauncher.exe",
+    "size": 0,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "minecraft": {
+    "version": "1.20.4",
+    "fabricLoader": "0.15.11"
+  },
+  "server": {
+    "address": "rendog.kr"
+  },
+  "mods": [
+    {
+      "id": "rendog-client",
+      "name": "RendogClient",
+      "description": "서버 자동 접속 · 필수 모드",
+      "required": true,
+      "url": "https://github.com/MellDa1024/RendogClient-1.20.4/releases/download/Delta/RendogClient-Delta.jar",
+      "fileName": "RendogClient-Delta.jar",
+      "size": 8709016,
+      "sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
+    }
+  ],
+  "files": []
+}
