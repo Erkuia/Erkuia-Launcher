@@ -40,6 +40,7 @@ export component LauncherWindow inherits Window {
     callback logout-clicked();
     callback switch-account(string);
     callback open-directory-clicked();
+    callback fps-changed(int);
 
     title: root.product-name;
     no-frame: true;
@@ -265,6 +266,10 @@ export component LauncherWindow inherits Window {
 
                         SettingsPanel {
                             program-directory: root.program-directory;
+                            target-fps <=> root.target-fps;
+                            fps-changed(fps) => {
+                                root.fps-changed(fps);
+                            }
                             close => {
                                 root.settings-open = false;
                             }

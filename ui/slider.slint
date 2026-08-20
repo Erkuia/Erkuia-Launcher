@@ -28,6 +28,7 @@ export component ValueSlider inherits Rectangle {
     }
 
     tooltip := Rectangle {
+        visible: touch.has-hover || touch.pressed;
         x: root.width * root.fraction - self.width / 2;
         y: 0px;
         height: Theme.slider-tooltip-height;
