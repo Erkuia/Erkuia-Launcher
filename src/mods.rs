@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 
 use crate::{hash::Checksum, manifest::Manifest, mc::version::DownloadTarget};
 
@@ -170,6 +170,106 @@ pub fn path_of(mods_dir: &Path, disabled_dir: &Path, entry: &ModInfo) -> PathBuf
     let root = if entry.enabled { mods_dir } else { disabled_dir };
 
     root.join(&entry.file_name)
+}
+
+pub fn set_enabled(
+    mods_dir: &Path,
+    disabled_dir: &Path,
+    entry: &ModInfo,
+    enabled: bool,
+) -> anyhow::Result<()> {
+    if !enabled && !entry.can_disable() {
+        bail!("{} 은(는) 필수 모드라 끌 수 없어요.", entry.name);
+    }
+
+    ensure_dirs(mods_dir, disabled_dir)?;
+
+    let (from, to) = if enabled {
+        (disabled_dir, mods_dir)
+    } else {
+        (mods_dir, disabled_dir)
+    };
+
+    let source = from.join(&entry.file_name);
+    let destination = to.join(&entry.file_name);
+
+    if !source.is_file() {
+        if destination.is_file() {
+            return Ok(());
+        }
+
+        bail!("{} 파일을 찾지 못했어요.", entry.file_name);
+    }
+
+    if destination.is_file() {
+        std::fs::remove_file(&source)
+            .with_context(|| format!("{} 중복 파일을 정리하지 못했어요.", entry.file_name))?;
+
+        return Ok(());
+    }
+
+    std::fs::rename(&source, &destination)
+        .with_context(|| format!("{} 상태를 바꾸지 못했어요.", entry.file_name))?;
+
+    log::info!(
+        "모드 {} -> {}",
+        entry.file_name,
+        if enabled { "켜짐" } else { "꺼짐" }
+    );
+
+    Ok(())
+}
+
+pub fn remove(mods_dir: &Path, disabled_dir: &Path, entry: &ModInfo) -> anyhow::Result<()> {
+    if !entry.is_removable() {
+        bail!("{} 은(는) 필수 모드라 삭제할 수 없어요.", entry.name);
+    }
+
+    let mut deleted = false;
+
+    for dir in [mods_dir, disabled_dir] {
+        let path = dir.join(&entry.file_name);
+
+        if path.is_file() {
+            std::fs::remove_file(&path)
+                .with_context(|| format!("{} 을(를) 삭제하지 못했어요.", entry.file_name))?;
+            deleted = true;
+        }
+    }
+
+    if !deleted {
+        bail!("{} 파일을 찾지 못했어요.", entry.file_name);
+    }
+
+    log::info!("모드 삭제: {}", entry.file_name);
+
+    Ok(())
+}
+
+fn find<'a>(entries: &'a [ModInfo], id: &str) -> anyhow::Result<&'a ModInfo> {
+    entries
+        .iter()
+        .find(|entry| entry.id == id)
+        .with_context(|| format!("모드를 찾지 못했어요: {id}"))
+}
+
+pub fn set_enabled_by_id(
+    mods_dir: &Path,
+    disabled_dir: &Path,
+    entries: &[ModInfo],
+    id: &str,
+    enabled: bool,
+) -> anyhow::Result<()> {
+    set_enabled(mods_dir, disabled_dir, find(entries, id)?, enabled)
+}
+
+pub fn remove_by_id(
+    mods_dir: &Path,
+    disabled_dir: &Path,
+    entries: &[ModInfo],
+    id: &str,
+) -> anyhow::Result<()> {
+    remove(mods_dir, disabled_dir, find(entries, id)?)
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -468,6 +568,133 @@ mod tests {
         let root = std::env::temp_dir().join(format!("rendog-mods-none-{}", std::process::id()));
 
         assert!(scan(&root.join("mods"), &root.join("mods-disabled"), None).is_empty());
+    }
+
+    #[test]
+    fn turning_a_local_mod_off_moves_it_to_the_disabled_folder() {
+        let fixture = Fixture::new("off");
+        fixture.put("mods", "custom.jar");
+        let entries = fixture.scan(None);
+
+        set_enabled(&fixture.mods(), &fixture.disabled(), &entries[0], false).unwrap();
+
+        assert!(!fixture.mods().join("custom.jar").exists());
+        assert!(fixture.disabled().join("custom.jar").is_file());
+    }
+
+    #[test]
+    fn turning_it_back_on_moves_it_home() {
+        let fixture = Fixture::new("on");
+        fixture.put("mods-disabled", "custom.jar");
+        let entries = fixture.scan(None);
+
+        set_enabled(&fixture.mods(), &fixture.disabled(), &entries[0], true).unwrap();
+
+        assert!(fixture.mods().join("custom.jar").is_file());
+        assert!(!fixture.disabled().join("custom.jar").exists());
+    }
+
+    #[test]
+    fn a_required_mod_cannot_be_turned_off() {
+        let fixture = Fixture::new("locked-off");
+        fixture.put("mods", "RendogClient-Delta.jar");
+        let entries = fixture.scan(Some(&manifest()));
+
+        let error = set_enabled(&fixture.mods(), &fixture.disabled(), &entries[0], false)
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("필수"));
+        assert!(fixture.mods().join("RendogClient-Delta.jar").is_file());
+    }
+
+    #[test]
+    fn a_required_mod_cannot_be_removed() {
+        let fixture = Fixture::new("locked-rm");
+        fixture.put("mods", "RendogClient-Delta.jar");
+        let entries = fixture.scan(Some(&manifest()));
+
+        assert!(remove(&fixture.mods(), &fixture.disabled(), &entries[0]).is_err());
+        assert!(fixture.mods().join("RendogClient-Delta.jar").is_file());
+    }
+
+    #[test]
+    fn toggling_to_the_state_it_is_already_in_is_harmless() {
+        let fixture = Fixture::new("noop");
+        fixture.put("mods", "custom.jar");
+        let entries = fixture.scan(None);
+
+        set_enabled(&fixture.mods(), &fixture.disabled(), &entries[0], true).unwrap();
+
+        assert!(fixture.mods().join("custom.jar").is_file());
+    }
+
+    #[test]
+    fn a_stray_copy_in_the_other_folder_is_cleaned_up_on_toggle() {
+        let fixture = Fixture::new("stray");
+        fixture.put("mods", "custom.jar");
+        fixture.put("mods-disabled", "custom.jar");
+        let entries = fixture.scan(None);
+
+        set_enabled(&fixture.mods(), &fixture.disabled(), &entries[0], false).unwrap();
+
+        assert!(fixture.disabled().join("custom.jar").is_file());
+        assert!(!fixture.mods().join("custom.jar").exists());
+    }
+
+    #[test]
+    fn removing_a_local_mod_clears_both_folders() {
+        let fixture = Fixture::new("remove");
+        fixture.put("mods", "custom.jar");
+        fixture.put("mods-disabled", "custom.jar");
+        let entries = fixture.scan(None);
+
+        remove(&fixture.mods(), &fixture.disabled(), &entries[0]).unwrap();
+
+        assert!(!fixture.mods().join("custom.jar").exists());
+        assert!(!fixture.disabled().join("custom.jar").exists());
+    }
+
+    #[test]
+    fn removing_something_that_is_not_there_is_reported() {
+        let fixture = Fixture::new("gone");
+        fixture.put("mods", "custom.jar");
+        let entries = fixture.scan(None);
+        std::fs::remove_file(fixture.mods().join("custom.jar")).unwrap();
+
+        assert!(remove(&fixture.mods(), &fixture.disabled(), &entries[0]).is_err());
+    }
+
+    #[test]
+    fn lookups_go_through_the_mod_id() {
+        let fixture = Fixture::new("by-id");
+        fixture.put("mods", "custom.jar");
+        let entries = fixture.scan(None);
+
+        set_enabled_by_id(
+            &fixture.mods(),
+            &fixture.disabled(),
+            &entries,
+            &entries[0].id,
+            false,
+        )
+        .unwrap();
+
+        assert!(fixture.disabled().join("custom.jar").is_file());
+    }
+
+    #[test]
+    fn an_unknown_id_is_reported() {
+        let fixture = Fixture::new("unknown-id");
+
+        assert!(set_enabled_by_id(
+            &fixture.mods(),
+            &fixture.disabled(),
+            &[],
+            "nope",
+            false
+        )
+        .is_err());
     }
 
     #[test]
