@@ -1,0 +1,21 @@
+[package]
+name = "rendog-launcher"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[[bin]]
+name = "RendogLauncher"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+slint = "1.8"
+
+[build-dependencies]
+slint-build = "1.8"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

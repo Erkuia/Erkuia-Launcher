@@ -23,8 +23,8 @@ Rendog Launcher(Rust + Slint)를 `RendogLauncher.exe`로 완성하기 위한 작
 
 - [x] **Azure AD Client ID 불필요** — Title Auth 방식 채택 (Phase 4)
 - [x] **데이터 디렉터리** — `%APPDATA%\RendogLauncher`, 인스톨러 반영 완료
-- [ ] 런처 매니페스트 호스팅 위치 (예: GitHub Releases, 자체 CDN)
-- [ ] Java 21 런타임 배포 방식 (번들 다운로드 vs 시스템 Java 요구)
+- [x] **런처 매니페스트 호스팅** — GitHub (`foliq/Rendog-Launcher` 릴리즈 자산)
+- [x] **Java 21 런타임** — 시스템에 없으면 번들 자동 다운로드 (Adoptium)
 
 ### 쓰기 권한 (해결됨)
 
@@ -172,7 +172,7 @@ Figma에는 **전체 화면 전환이 없습니다.** 단일 메인 화면 위�
 
 | ID | 작업 | 내용 |
 | --- | --- | --- |
-| L5-1 | 런처 매니페스트 스키마 | `launcher-manifest.json` — 런처 버전, 필수 모드, 추가 파일, size + SHA-256 |
+| L5-1 | 런처 매니페스트 스키마 | `launcher-manifest.json` — 런처 버전, 필수 모드, 추가 파일, size + SHA-256. **GitHub 릴리즈 자산으로 호스팅** |
 | L5-2 | Minecraft 1.20.4 설치 | version.json, 클라이언트 jar, 라이브러리, natives |
 | L5-3 | 에셋 인덱스 | asset index 파싱 + `objects/` 다운로드 |
 | L5-4 | Fabric 로더 설치 | Fabric Meta API → 로더 버전 고정, 라이브러리 병합 |
@@ -194,8 +194,8 @@ Figma에는 **전체 화면 전환이 없습니다.** 단일 메인 화면 위�
 
 | ID | 작업 | 내용 |
 | --- | --- | --- |
-| L7-1 | Java 탐지 | 번들 런타임 → `%APPDATA%\RendogLauncher\runtime` → 시스템 `JAVA_HOME`/PATH |
-| L7-2 | 런타임 확보 | Java 21 없으면 Adoptium API로 다운로드 후 전개 |
+| L7-1 | Java 탐지 | `%APPDATA%\RendogLauncher\runtime` → 시스템 `JAVA_HOME`/PATH 순으로 Java 21 탐색 |
+| L7-2 | 런타임 자동 확보 | **Java 21이 없으면 Adoptium(Temurin) JRE 21 자동 다운로드 → `runtime/`에 전개 → SHA-256 검증.** 진행률은 시작 흐름에 표시 |
 | L7-3 | JVM 인자 빌더 | 힙 자동 산정(시스템 RAM 기반), GC 옵션, `-Djava.library.path`, classpath |
 | L7-4 | Minecraft 인자 빌더 | `accessToken`, `uuid`, `username`, `assetsDir`, `versionType` |
 | L7-5 | 프로세스 실행 | 작업 디렉터리 `%APPDATA%\RendogLauncher\minecraft`, 로그 수집, 실행 후 런처 종료 |

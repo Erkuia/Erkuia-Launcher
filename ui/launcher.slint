@@ -1,0 +1,46 @@
+// Rendog Launcher UI root.
+//
+// Scaffolding only (L0-1). The design tokens (L1-1), the frameless custom
+// title bar (L1-2) and the real screens (Phase 2) land in later tasks, so this
+// window still uses the default OS frame on purpose: dropping the frame before
+// the custom title bar exists would leave the window impossible to move or
+// close.
+
+export component LauncherWindow inherits Window {
+    in-out property <string> product-name: "Rendog Launcher";
+    in-out property <string> launcher-version: "v0.1.0";
+    in-out property <string> server-address: "rendog.kr";
+    in-out property <string> minecraft-version: "1.20.4";
+
+    title: root.product-name;
+    width: 1000px;
+    height: 640px;
+    background: #fcfdff;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+
+        Text {
+            text: "RENDOG LAUNCHER";
+            color: #141619;
+            font-size: 18px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.server-address + " · Minecraft " + root.minecraft-version;
+            color: #66696c;
+            font-size: 13px;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.launcher-version;
+            color: #83868a;
+            font-size: 11px;
+            horizontal-alignment: center;
+        }
+    }
+}
