@@ -209,6 +209,48 @@ pub fn poll_for_token(code: &DeviceCode, cancel: &Cancel) -> anyhow::Result<MsaT
     }
 }
 
+pub fn refresh(refresh_token: &str) -> anyhow::Result<MsaToken> {
+    let response = crate::http::send_raw(
+        crate::http::client()?
+            .post(TOKEN_URL)
+            .form(&[
+                ("client_id", CLIENT_ID),
+                ("scope", SCOPE),
+                ("grant_type", "refresh_token"),
+                ("refresh_token", refresh_token),
+            ]),
+    )
+    .context("Microsoft 세션을 갱신하지 못했어요.")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let failure: ErrorResponse = response.json().unwrap_or(ErrorResponse {
+            error: format!("http_{}", status.as_u16()),
+            error_description: None,
+        });
+
+        log::error!(
+            "세션 갱신 실패: {} ({})",
+            failure.error,
+            failure.error_description.unwrap_or_default()
+        );
+
+        bail!("저장된 로그인이 만료됐어요. 다시 로그인해 주세요.");
+    }
+
+    let token: TokenResponse = response
+        .json()
+        .context("Microsoft 갱신 응답을 해석하지 못했어요.")?;
+
+    log::info!("Microsoft 세션 갱신 완료");
+
+    Ok(MsaToken {
+        access_token: token.access_token,
+        refresh_token: token.refresh_token,
+        expires_at: Instant::now() + Duration::from_secs(token.expires_in),
+    })
+}
+
 /// Hand the URL to the shell so it lands in whatever browser the user has set.
 pub fn open_in_browser(url: &str) -> anyhow::Result<()> {
     std::process::Command::new("explorer.exe")
