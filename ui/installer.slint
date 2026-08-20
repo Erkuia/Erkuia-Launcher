@@ -40,30 +40,28 @@ component StepItem inherits VerticalLayout {
     in property <bool> last;
 
     spacing: 0px;
+    vertical-stretch: 0;
 
     HorizontalLayout {
+        height: 22px;
         spacing: 11px;
         alignment: start;
 
-        VerticalLayout {
-            alignment: center;
+        Rectangle {
+            width: 22px;
+            height: 22px;
+            border-radius: 11px;
+            border-width: 1.5px;
+            border-color: (root.active || root.done) ? Theme.accent : Theme.step-idle-border;
+            background: (root.active || root.done) ? Theme.accent : transparent;
 
-            Rectangle {
-                width: 22px;
-                height: 22px;
-                border-radius: 11px;
-                border-width: 1.5px;
-                border-color: (root.active || root.done) ? Theme.accent : Theme.step-idle-border;
-                background: (root.active || root.done) ? Theme.accent : transparent;
-
-                Text {
-                    text: root.number;
-                    color: (root.active || root.done) ? #ffffff : Theme.step-idle-text;
-                    font-size: 10px;
-                    font-weight: 700;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+            Text {
+                text: root.number;
+                color: (root.active || root.done) ? #ffffff : Theme.step-idle-text;
+                font-size: 10px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
             }
         }
 
@@ -77,12 +75,12 @@ component StepItem inherits VerticalLayout {
     }
 
     if !root.last: HorizontalLayout {
+        height: 20px;
         alignment: start;
         padding-left: 10.25px;
 
         Rectangle {
             width: 1.5px;
-            height: 20px;
             background: root.done ? Theme.accent : Theme.connector-idle;
         }
     }
@@ -365,6 +363,7 @@ component Sidebar inherits Rectangle {
         HorizontalLayout {
             spacing: 11px;
             alignment: start;
+            vertical-stretch: 0;
 
             VerticalLayout {
                 alignment: center;
@@ -415,6 +414,7 @@ component Sidebar inherits Rectangle {
 
         VerticalLayout {
             spacing: 0px;
+            vertical-stretch: 0;
 
             StepItem {
                 label: "시작";
