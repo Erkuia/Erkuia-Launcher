@@ -1,6 +1,51 @@
 #![allow(dead_code)]
 
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
+
 use crate::{error::ErrorCode, LauncherWindow};
+
+/// Cooperative cancellation shared between the UI thread and background work.
+#[derive(Clone, Default)]
+pub struct Cancel(Arc<AtomicBool>);
+
+impl Cancel {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn cancel(&self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+
+    /// Sleep in slices so a cancel lands within `SLICE` rather than after the
+    /// whole wait. Returns `false` if the wait was cut short.
+    pub fn sleep(&self, total: Duration) -> bool {
+        const SLICE: Duration = Duration::from_millis(200);
+
+        let mut remaining = total;
+        while !remaining.is_zero() {
+            if self.is_cancelled() {
+                return false;
+            }
+
+            let step = remaining.min(SLICE);
+            std::thread::sleep(step);
+            remaining -= step;
+        }
+
+        !self.is_cancelled()
+    }
+}
 
 /// Ordered phases of the start flow, each owning a slice of the progress bar.
 ///
@@ -111,6 +156,35 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cancel_is_visible_through_clones() {
+        let cancel = Cancel::new();
+        let clone = cancel.clone();
+
+        assert!(!clone.is_cancelled());
+        cancel.cancel();
+        assert!(clone.is_cancelled());
+    }
+
+    #[test]
+    fn sleeping_returns_early_once_cancelled() {
+        let cancel = Cancel::new();
+        cancel.cancel();
+
+        let started = std::time::Instant::now();
+        let completed = cancel.sleep(Duration::from_secs(5));
+
+        assert!(!completed);
+        assert!(started.elapsed() < Duration::from_secs(1));
+    }
+
+    #[test]
+    fn an_uncancelled_sleep_runs_to_completion() {
+        let cancel = Cancel::new();
+
+        assert!(cancel.sleep(Duration::from_millis(50)));
+    }
 
     #[test]
     fn spans_are_contiguous_and_cover_the_whole_bar() {

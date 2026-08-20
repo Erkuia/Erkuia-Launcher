@@ -42,17 +42,25 @@ pub fn client() -> anyhow::Result<Client> {
 /// Only transport errors and the statuses in [`is_retryable`] are retried; a
 /// 4xx means the request itself is wrong and repeating it changes nothing.
 pub fn send(request: RequestBuilder) -> anyhow::Result<Response> {
+    check(send_raw(request)?)
+}
+
+/// Like [`send`], but hands back non-success responses instead of turning them
+/// into errors. Needed where the status is part of the protocol — OAuth device
+/// polling answers `400 authorization_pending` on every tick until the user is
+/// done.
+pub fn send_raw(request: RequestBuilder) -> anyhow::Result<Response> {
     let mut backoff = FIRST_BACKOFF;
     let mut last: Option<anyhow::Error> = None;
 
     for attempt in 1..=MAX_ATTEMPTS {
         let Some(pending) = request.try_clone() else {
-            return check(request.send().context("네트워크 요청에 실패했어요.")?);
+            return request.send().context("네트워크 요청에 실패했어요.");
         };
 
         match pending.send() {
-            Ok(response) if !is_retryable(response.status()) => return check(response),
-            Ok(response) if attempt == MAX_ATTEMPTS => return check(response),
+            Ok(response) if !is_retryable(response.status()) => return Ok(response),
+            Ok(response) if attempt == MAX_ATTEMPTS => return Ok(response),
             Ok(response) => {
                 log::warn!("요청 재시도 {attempt}/{MAX_ATTEMPTS} (HTTP {})", response.status());
             }
