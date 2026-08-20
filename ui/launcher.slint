@@ -4,6 +4,7 @@ import { PrimaryButton, SecondaryButton, AccentButton, TextButton, Toggle, Badge
 import { ValueSlider } from "slider.slint";
 import { ModalOverlay, Popover } from "overlays.slint";
 import { ProfileChip, ProfileMenu, Account } from "profile.slint";
+import { SettingsPanel } from "settings.slint";
 
 export component LauncherWindow inherits Window {
     in-out property <string> product-name: "Rendog Launcher";
@@ -38,6 +39,7 @@ export component LauncherWindow inherits Window {
     callback add-account-clicked();
     callback logout-clicked();
     callback switch-account(string);
+    callback open-directory-clicked();
 
     title: root.product-name;
     no-frame: true;
@@ -259,6 +261,16 @@ export component LauncherWindow inherits Window {
                         open: root.settings-open;
                         close => {
                             root.settings-open = false;
+                        }
+
+                        SettingsPanel {
+                            program-directory: root.program-directory;
+                            close => {
+                                root.settings-open = false;
+                            }
+                            open-directory => {
+                                root.open-directory-clicked();
+                            }
                         }
                     }
                 }

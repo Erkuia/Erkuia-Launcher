@@ -92,6 +92,12 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
+    app.on_open_directory_clicked(move || {
+        if let Ok(dir) = paths::install_dir() {
+            let _ = std::process::Command::new("explorer.exe").arg(dir).spawn();
+        }
+    });
+
     app.on_close_clicked({
         let app = app.as_weak();
         let title_drag_state = Rc::clone(&title_drag_state);

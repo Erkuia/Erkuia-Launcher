@@ -1,0 +1,121 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme, Typo } from "theme.slint";
+import { SecondaryButton, ReadOnlyField, Divider } from "controls.slint";
+
+component CloseButton inherits Rectangle {
+    callback clicked();
+
+    width: 26px;
+    height: 26px;
+    border-radius: Theme.radius-modal-close;
+    background: touch.pressed
+        ? Theme.control
+        : (touch.has-hover ? Theme.field-background : transparent);
+
+    Text {
+        text: "×";
+        color: Theme.secondary;
+        font-size: Typo.modal-close;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component SettingsPanel inherits VerticalLayout {
+    in property <string> program-directory;
+    callback close();
+    callback open-directory();
+
+    spacing: 0px;
+
+    HorizontalLayout {
+        vertical-stretch: 0;
+
+        VerticalLayout {
+            alignment: center;
+            padding-bottom: 2px;
+
+            Text {
+                text: "설정";
+                color: Theme.heading;
+                font-size: Typo.modal-title;
+                font-weight: Typo.bold;
+            }
+        }
+
+        Rectangle {
+            background: transparent;
+            horizontal-stretch: 1;
+        }
+
+        CloseButton {
+            clicked => {
+                root.close();
+            }
+        }
+    }
+
+    VerticalLayout {
+        vertical-stretch: 1;
+        padding-top: 4px;
+
+        ScrollView {
+            VerticalLayout {
+                padding-right: 12px;
+                padding-top: 16px;
+                spacing: 4px;
+
+                @children
+            }
+        }
+    }
+
+    VerticalLayout {
+        vertical-stretch: 0;
+        height: 31px;
+        padding-top: 16px;
+        padding-bottom: 14px;
+
+        Divider { }
+    }
+
+    VerticalLayout {
+        vertical-stretch: 0;
+        padding-bottom: 1px;
+
+        Text {
+            text: "프로그램 디렉토리";
+            color: Theme.muted;
+            font-size: Typo.footer;
+        }
+    }
+
+    VerticalLayout {
+        vertical-stretch: 0;
+        padding-top: 8px;
+
+        HorizontalLayout {
+            spacing: 8px;
+
+            ReadOnlyField {
+                text: root.program-directory;
+                horizontal-stretch: 1;
+            }
+
+            SecondaryButton {
+                text: "열기";
+                compact: true;
+                clicked => {
+                    root.open-directory();
+                }
+            }
+        }
+    }
+}
