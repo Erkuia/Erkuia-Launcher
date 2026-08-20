@@ -1,0 +1,214 @@
+import { Theme } from "theme.slint";
+
+export component CheckGlyph inherits Path {
+    in property <brush> color: #ffffff;
+    in property <length> thickness: 2px;
+
+    viewbox-x: 0;
+    viewbox-y: 0;
+    viewbox-width: 16;
+    viewbox-height: 16;
+    commands: "M 3.6 8.3 L 6.6 11.4 L 12.6 4.8";
+    stroke: root.color;
+    stroke-width: root.thickness;
+}
+
+export component StepItem inherits VerticalLayout {
+    in property <string> label;
+    in property <int> number;
+    in property <bool> active;
+    in property <bool> done;
+    in property <bool> last;
+
+    spacing: 0px;
+    vertical-stretch: 0;
+
+    HorizontalLayout {
+        height: 22px;
+        spacing: 11px;
+        alignment: start;
+
+        Rectangle {
+            width: 22px;
+            height: 22px;
+            border-radius: 11px;
+            border-width: 1.5px;
+            border-color: (root.active || root.done) ? Theme.accent : Theme.step-idle-border;
+            background: (root.active || root.done) ? Theme.accent : transparent;
+
+            Text {
+                text: root.number;
+                color: (root.active || root.done) ? #ffffff : Theme.step-idle-text;
+                font-size: 10px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: root.label;
+            color: root.active ? Theme.heading : (root.done ? Theme.strong : Theme.muted);
+            font-size: 12.5px;
+            font-weight: root.active ? 700 : 500;
+            vertical-alignment: center;
+        }
+    }
+
+    if !root.last: HorizontalLayout {
+        height: 20px;
+        alignment: start;
+        padding-left: 10.25px;
+
+        Rectangle {
+            width: 1.5px;
+            background: root.done ? Theme.accent : Theme.connector-idle;
+        }
+    }
+}
+
+export component PrimaryButton inherits Rectangle {
+    in property <string> text;
+    callback clicked();
+
+    height: 38px;
+    width: label.preferred-width + 52px;
+    border-radius: 9px;
+    background: touch-area.pressed ? Theme.accent-pressed : (touch-area.has-hover ? Theme.accent-hover : Theme.accent);
+
+    label := Text {
+        text: root.text;
+        color: #ffffff;
+        font-size: 12.5px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component SecondaryButton inherits Rectangle {
+    in property <string> text;
+    callback clicked();
+
+    height: 42px;
+    width: label.preferred-width + 34px;
+    border-radius: 9px;
+    border-width: 1px;
+    border-color: Theme.field-border;
+    background: touch-area.pressed ? #eef1f4 : (touch-area.has-hover ? #f5f7f9 : #ffffff);
+
+    label := Text {
+        text: root.text;
+        color: Theme.field-text;
+        font-size: 12.5px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component TextButton inherits Rectangle {
+    in property <string> text;
+    callback clicked();
+
+    height: 38px;
+    width: label.preferred-width + 24px;
+    background: transparent;
+
+    label := Text {
+        text: root.text;
+        color: touch-area.has-hover ? Theme.heading : #6f7275;
+        font-size: 12px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component PathInput inherits Rectangle {
+    in-out property <string> text;
+
+    height: 42px;
+    border-radius: 9px;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.field-border;
+    background: Theme.field-background;
+    clip: true;
+
+    HorizontalLayout {
+        padding-left: 13px;
+        padding-right: 13px;
+
+        input := TextInput {
+            text <=> root.text;
+            font-size: 12.5px;
+            color: Theme.field-text;
+            single-line: true;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component OptionCheckBox inherits Rectangle {
+    in property <string> text;
+    in-out property <bool> checked;
+
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 18px;
+                height: 18px;
+                border-radius: 5px;
+                border-width: 1.5px;
+                border-color: root.checked ? Theme.accent : Theme.step-idle-border;
+                background: root.checked ? Theme.accent : #ffffff;
+
+                if root.checked: CheckGlyph {
+                    thickness: 2.1px;
+                }
+            }
+        }
+
+        Text {
+            text: root.text;
+            color: Theme.strong;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+    }
+
+    touch-area := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+        }
+    }
+}

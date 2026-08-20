@@ -1,0 +1,100 @@
+import { Theme } from "theme.slint";
+
+component WindowButton inherits Rectangle {
+    in property <string> glyph;
+    in property <bool> danger;
+    callback clicked();
+
+    width: 40px;
+    height: 40px;
+    background: root.danger
+        ? (touch-area.pressed ? #c02c2c : (touch-area.has-hover ? Theme.danger : transparent))
+        : (touch-area.pressed ? #dfe3e8 : (touch-area.has-hover ? #eceff2 : transparent));
+
+    Text {
+        text: root.glyph;
+        color: (root.danger && touch-area.has-hover) ? #ffffff : #6f7275;
+        font-size: 15px;
+        font-weight: 500;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch-area := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component TitleBar inherits Rectangle {
+    in property <string> title;
+    callback drag-started(float, float);
+    callback drag-moved(float, float);
+    callback drag-ended();
+    callback close-clicked();
+    callback minimize-clicked();
+
+    height: 40px;
+    background: Theme.surface;
+
+    drag-area := TouchArea {
+        x: 0px;
+        y: 0px;
+        width: parent.width - 80px;
+        height: parent.height;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.drag-started(self.pressed-x / 1px, self.pressed-y / 1px);
+            }
+            if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                root.drag-ended();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-moved(self.mouse-x / 1px, self.mouse-y / 1px);
+            }
+        }
+    }
+
+    HorizontalLayout {
+        spacing: 0px;
+        padding-left: 18px;
+
+        Text {
+            text: root.title;
+            color: #616467;
+            font-size: 11.5px;
+            font-weight: 500;
+            vertical-alignment: center;
+            horizontal-stretch: 0;
+        }
+
+        Rectangle {
+            background: transparent;
+            horizontal-stretch: 1;
+        }
+
+        WindowButton {
+            glyph: "–";
+            clicked => {
+                root.minimize-clicked();
+            }
+        }
+
+        WindowButton {
+            glyph: "×";
+            danger: true;
+            clicked => {
+                root.close-clicked();
+            }
+        }
+    }
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.line;
+    }
+}
