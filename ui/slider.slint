@@ -1,0 +1,114 @@
+import { Theme, Typo } from "theme.slint";
+
+export component ValueSlider inherits Rectangle {
+    in property <int> minimum: 30;
+    in property <int> maximum: 150;
+    in property <int> step: 1;
+    in property <[int]> ticks: [30, 60, 90, 120, 150];
+    in-out property <int> value: 105;
+    callback changed(int);
+
+    out property <float> fraction: (root.maximum > root.minimum)
+        ? (root.value - root.minimum) * 1.0 / (root.maximum - root.minimum)
+        : 0;
+
+    height: Theme.slider-height;
+    background: transparent;
+
+    function snapped(position: length) -> int {
+        return Math.max(root.minimum, Math.min(root.maximum,
+            root.minimum + Math.round((position / root.width) * (root.maximum - root.minimum) * 1.0 / root.step) * root.step));
+    }
+
+    function commit(position: length) {
+        if (root.value != root.snapped(position)) {
+            root.value = root.snapped(position);
+            root.changed(root.value);
+        }
+    }
+
+    tooltip := Rectangle {
+        x: root.width * root.fraction - self.width / 2;
+        y: 0px;
+        height: Theme.slider-tooltip-height;
+        border-radius: Theme.radius-tooltip;
+        background: Theme.tooltip;
+
+        HorizontalLayout {
+            padding-left: 8px;
+            padding-right: 8px;
+            padding-top: 3px;
+            padding-bottom: 3px;
+
+            Text {
+                text: root.value;
+                color: Theme.tooltip-text;
+                font-size: Typo.footer;
+                font-weight: Typo.bold;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    Rectangle {
+        x: 0px;
+        y: Theme.slider-track-top;
+        width: root.width;
+        height: Theme.slider-track;
+        border-radius: Theme.radius-pill;
+        background: Theme.control;
+
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: parent.width * root.fraction;
+            height: parent.height;
+            border-radius: Theme.radius-pill;
+            background: Theme.accent;
+        }
+    }
+
+    Rectangle {
+        x: root.width * root.fraction - Theme.slider-thumb / 2;
+        y: Theme.slider-track-top + (Theme.slider-track - Theme.slider-thumb) / 2;
+        width: Theme.slider-thumb;
+        height: Theme.slider-thumb;
+        border-radius: Theme.radius-pill;
+        border-width: Theme.slider-thumb-border;
+        border-color: Theme.accent;
+        background: Theme.raised;
+        drop-shadow-blur: Theme.shadow-knob-blur;
+        drop-shadow-offset-y: Theme.shadow-knob-offset-y;
+        drop-shadow-color: Theme.shadow-knob-color;
+    }
+
+    for tick in root.ticks: Text {
+        x: root.width * ((tick - root.minimum) * 1.0 / (root.maximum - root.minimum)) - self.width / 2;
+        y: Theme.slider-tick-top;
+        height: Theme.slider-tick-height;
+        text: tick;
+        color: Theme.tick;
+        font-size: Typo.tick;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        x: 0px;
+        y: Theme.slider-track-top - 9px;
+        width: root.width;
+        height: Theme.slider-thumb + 8px;
+        mouse-cursor: MouseCursor.pointer;
+
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.commit(self.pressed-x);
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.commit(self.mouse-x);
+            }
+        }
+    }
+}
