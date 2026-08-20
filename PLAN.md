@@ -148,9 +148,10 @@ verificationUri + "?otc=" + userCode
 | Scope | `service::user.auth.xboxlive.com::MBI_SSL` (`SCOPE_TITLE_AUTH`) |
 | Device code 발급 | `https://login.live.com/oauth20_connect.srf` |
 | 토큰 발급/갱신 | `https://login.live.com/oauth20_token.srf` |
-| Xbox Live | `https://user.auth.xboxlive.com/user/authenticate` |
-| XSTS | `https://xsts.auth.xboxlive.com/xsts/authorize` (`rp://api.minecraftservices.com/`) |
-| Minecraft 토큰 | `https://api.minecraftservices.com/authentication/login_with_xbox` |
+| 디바이스 토큰 | `https://device.auth.xboxlive.com/device/authenticate` |
+| SISU (user+title+XSTS) | `https://sisu.xboxlive.com/authorize` (`rp://api.minecraftservices.com/`) |
+| Minecraft 토큰 | `https://api.minecraftservices.com/launcher/login` (`MinecraftLauncherLoginRequest`) |
+| 소유 확인 | `https://api.minecraftservices.com/entitlements/mcstore` |
 | 프로필 | `https://api.minecraftservices.com/minecraft/profile` |
 
 > Title auth는 v2.0이 아니라 `login.live.com` 레거시 엔드포인트를 씁니다.
@@ -165,7 +166,7 @@ verificationUri + "?otc=" + userCode
 | L4-3 | Xbox 요청 서명 | ECDSA P-256 키쌍, `ProofKey`(JWK), `Signature` 헤더 (`SignedXblPostRequest` 이식) |
 | L4-4 | 디바이스 토큰 | `device.auth.xboxlive.com/device/authenticate`, `AuthMethod: ProofOfPossession` |
 | L4-5 | SISU 인증 | `sisu.xboxlive.com/authorize` → UserToken / TitleToken / AuthorizationToken(XSTS). XErr 안내 (`2148916233` 계정 없음 / `2148916238` 미성년자) |
-| L4-6 | Minecraft 로그인 | `login_with_xbox` 교환 + 게임 소유 확인 |
+| L4-6 | Minecraft 로그인 | `launcher/login` 교환 (`platform: PC_LAUNCHER`, `xtoken: XBL3.0 x=uhs;token`) + `entitlements/mcstore` 소유 확인 |
 | L4-7 | 프로필 조회 | UUID, 닉네임, 스킨 URL |
 | L4-7b | 스킨 헤드 아바타 | 스킨 PNG(64×64)에서 얼굴 `(8,8)-(16,16)`과 모자 레이어 `(40,8)-(48,16)`를 합성해 8×8 헤드 생성 → 캐시. 로드 전에는 이니셜 표시 |
 | L4-8 | 계정 저장소 | **여러 계정** 리프레시 토큰 + 디바이스 키쌍/ID를 DPAPI로 암호화 저장 |

@@ -15,6 +15,13 @@ pub struct XblToken {
     pub not_after: String,
 }
 
+impl XblToken {
+    /// `XblXstsToken.getAuthorizationHeader()`
+    pub fn authorization_header(&self) -> String {
+        format!("XBL3.0 x={};{}", self.user_hash, self.token)
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct XblTokenResponse {
     #[serde(rename = "Token")]
