@@ -17,6 +17,7 @@ mod error;
 mod http;
 mod logger;
 mod manifest;
+mod mc;
 mod paths;
 mod shell;
 mod task;
