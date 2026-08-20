@@ -55,6 +55,15 @@ impl Paths {
         self.data_dir.join("config.json")
     }
 
+    pub fn bootstrap(&self) -> anyhow::Result<()> {
+        for dir in self.required_dirs() {
+            std::fs::create_dir_all(&dir)
+                .with_context(|| format!("{} 폴더를 만들지 못했어요.", dir.display()))?;
+        }
+
+        Ok(())
+    }
+
     pub fn required_dirs(&self) -> Vec<PathBuf> {
         vec![
             self.data_dir.clone(),
@@ -106,6 +115,28 @@ mod tests {
                 dir.display()
             );
         }
+    }
+
+    #[test]
+    fn bootstrap_creates_every_directory_and_is_repeatable() {
+        let root = std::env::temp_dir().join(format!(
+            "rendog-launcher-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let paths = Paths::with_data_dir(root.clone());
+
+        paths.bootstrap().expect("first bootstrap");
+        paths.bootstrap().expect("bootstrap is idempotent");
+
+        for dir in paths.required_dirs() {
+            assert!(dir.is_dir(), "{} was not created", dir.display());
+        }
+
+        std::fs::remove_dir_all(&root).ok();
     }
 
     #[test]

@@ -9,6 +9,7 @@ mod error;
 mod paths;
 
 use error::{ErrorCode, UserError};
+use paths::Paths;
 
 slint::include_modules!();
 
@@ -21,20 +22,18 @@ struct TitleDragState {
 fn main() -> anyhow::Result<()> {
     std::env::set_var("SLINT_STYLE", "fluent-light");
 
-    let paths = paths::Paths::resolve()
-        .map_err(|error| report(ErrorCode::Config, &error))
-        .context("failed to resolve launcher paths")?;
-
     let app = LauncherWindow::new().context("failed to create launcher window")?;
 
     app.set_launcher_version(format!("v{}", env!("CARGO_PKG_VERSION")).into());
-    app.set_data_directory(paths.data_dir().display().to_string().into());
     app.set_program_directory(
         paths::install_dir()
             .map(|dir| dir.display().to_string())
             .unwrap_or_default()
             .into(),
     );
+
+    let paths: Rc<RefCell<Option<Paths>>> = Rc::new(RefCell::new(None));
+    prepare_paths(&app, &paths);
 
     let title_drag_state = Rc::new(RefCell::new(None::<TitleDragState>));
 
@@ -98,6 +97,16 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
+    app.on_error_retry({
+        let app = app.as_weak();
+        let paths = Rc::clone(&paths);
+        move || {
+            if let Some(app) = app.upgrade() {
+                prepare_paths(&app, &paths);
+            }
+        }
+    });
+
     app.on_close_clicked({
         let app = app.as_weak();
         let title_drag_state = Rc::clone(&title_drag_state);
@@ -115,8 +124,25 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn report(code: ErrorCode, error: &anyhow::Error) -> anyhow::Error {
-    eprintln!("{}", UserError::from_error(code, error));
+fn prepare_paths(app: &LauncherWindow, slot: &Rc<RefCell<Option<Paths>>>) {
+    match Paths::resolve().and_then(|paths| paths.bootstrap().map(|()| paths)) {
+        Ok(paths) => {
+            app.set_data_directory(paths.data_dir().display().to_string().into());
+            app.set_error_open(false);
+            *slot.borrow_mut() = Some(paths);
+        }
+        Err(error) => {
+            *slot.borrow_mut() = None;
+            show_error(app, ErrorCode::Config, &error);
+        }
+    }
+}
 
-    anyhow::anyhow!("{error:#}")
+fn show_error(app: &LauncherWindow, code: ErrorCode, error: &anyhow::Error) {
+    let user_error = UserError::from_error(code, error);
+
+    app.set_error_code(user_error.code.as_str().into());
+    app.set_error_message(user_error.message.into());
+    app.set_error_retryable(true);
+    app.set_error_open(true);
 }
