@@ -22,6 +22,7 @@ mod manifest;
 mod mc;
 mod mods;
 mod paths;
+mod runtime;
 mod shell;
 mod task;
 
