@@ -49,6 +49,7 @@ export component ProfileChip inherits Rectangle {
     in property <image> avatar;
     callback clicked();
 
+    min-width: Theme.popover-width;
     border-radius: Theme.radius-chip;
     border-width: 1px;
     border-color: Theme.frame-border;
@@ -81,6 +82,13 @@ export component ProfileChip inherits Rectangle {
             font-size: Typo.body;
             font-weight: Typo.semibold;
             vertical-alignment: center;
+            horizontal-stretch: 0;
+            overflow: elide;
+        }
+
+        Rectangle {
+            background: transparent;
+            horizontal-stretch: 1;
         }
 
         VerticalLayout {
