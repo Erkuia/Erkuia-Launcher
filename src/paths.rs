@@ -55,6 +55,10 @@ impl Paths {
         self.data_dir.join("config.json")
     }
 
+    pub fn secrets_file(&self) -> PathBuf {
+        self.data_dir.join("accounts.dat")
+    }
+
     pub fn bootstrap(&self) -> anyhow::Result<()> {
         for dir in self.required_dirs() {
             std::fs::create_dir_all(&dir)
