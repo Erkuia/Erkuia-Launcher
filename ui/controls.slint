@@ -76,36 +76,29 @@ export component SecondaryButton inherits Rectangle {
     }
 }
 
-export component ProgressButton inherits Rectangle {
+export component ProgressBar inherits Rectangle {
     in property <float> progress;
 
-    border-radius: Theme.radius-primary;
-    background: Theme.control;
-    clip: true;
+    width: Theme.progress-width;
+    background: transparent;
 
     Rectangle {
-        x: 0px;
-        y: 0px;
-        width: parent.width * Math.max(0, Math.min(1, root.progress));
-        height: parent.height;
-        background: Theme.accent;
+        y: (parent.height - Theme.progress-track) / 2;
+        width: parent.width;
+        height: Theme.progress-track;
+        border-radius: Theme.radius-progress;
+        background: Theme.control;
+        clip: true;
 
-        animate width { duration: 160ms; easing: ease-out; }
-    }
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: parent.width * Math.max(0, Math.min(1, root.progress));
+            height: parent.height;
+            border-radius: Theme.radius-progress;
+            background: Theme.accent;
 
-    HorizontalLayout {
-        padding-left: 56px;
-        padding-right: 56px;
-        padding-top: 15px;
-        padding-bottom: 16px;
-
-        Text {
-            text: Math.round(Math.max(0, Math.min(1, root.progress)) * 100) + "%";
-            color: Theme.heading;
-            font-size: Typo.primary-button;
-            font-weight: Typo.bold;
-            horizontal-alignment: center;
-            vertical-alignment: center;
+            animate width { duration: 160ms; easing: ease-out; }
         }
     }
 }

@@ -253,12 +253,8 @@ pub fn refresh(refresh_token: &str) -> anyhow::Result<MsaToken> {
 
 /// Hand the URL to the shell so it lands in whatever browser the user has set.
 pub fn open_in_browser(url: &str) -> anyhow::Result<()> {
-    std::process::Command::new("explorer.exe")
-        .arg(url)
-        .spawn()
-        .with_context(|| format!("브라우저를 열지 못했어요. 직접 접속해 주세요: {url}"))?;
-
-    Ok(())
+    crate::shell::open(url)
+        .with_context(|| format!("브라우저를 열지 못했어요. 직접 접속해 주세요: {url}"))
 }
 
 #[cfg(test)]

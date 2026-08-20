@@ -17,6 +17,7 @@ mod error;
 mod http;
 mod logger;
 mod paths;
+mod shell;
 mod task;
 
 use auth::{
@@ -188,7 +189,9 @@ fn main() -> anyhow::Result<()> {
 
     app.on_open_directory_clicked(move || {
         if let Ok(dir) = paths::install_dir() {
-            let _ = std::process::Command::new("explorer.exe").arg(dir).spawn();
+            if let Err(error) = shell::open(&dir.display().to_string()) {
+                log::warn!("폴더를 열지 못했습니다: {error:#}");
+            }
         }
     });
 

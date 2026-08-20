@@ -1,6 +1,6 @@
 import { Theme, Typo } from "theme.slint";
 import { TitleBar } from "title_bar.slint";
-import { PrimaryButton, ProgressButton, SecondaryButton, AccentButton, TextButton, Toggle, Badge, Divider, ReadOnlyField } from "controls.slint";
+import { PrimaryButton, ProgressBar, SecondaryButton, AccentButton, TextButton, Toggle, Badge, Divider, ReadOnlyField } from "controls.slint";
 import { ErrorModal } from "error.slint";
 import { ValueSlider } from "slider.slint";
 import { ModalOverlay, Popover } from "overlays.slint";
@@ -216,8 +216,14 @@ export component LauncherWindow inherits Window {
                                     }
                                 }
 
-                                if root.busy: ProgressButton {
-                                    progress: root.progress;
+                                if root.busy: Rectangle {
+                                    width: Theme.progress-width;
+                                    height: 49px;
+                                    background: transparent;
+
+                                    ProgressBar {
+                                        progress: root.progress;
+                                    }
                                 }
                             }
 
