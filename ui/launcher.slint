@@ -12,12 +12,24 @@ export component LauncherWindow inherits Window {
     in-out property <string> program-directory: "";
     in-out property <string> data-directory: "";
 
+    in-out property <bool> signed-in;
+    in-out property <string> account-name;
+    in-out property <string> account-initial;
+
+    in-out property <bool> profile-open;
+    in-out property <bool> settings-open;
+
+    in-out property <int> target-fps: 105;
+    in-out property <bool> adaptive-rendering: true;
+
+    in-out property <bool> busy;
+    in-out property <string> status-hint: "시작하려면 먼저 로그인해 주세요";
+
     callback title-drag-started(float, float);
     callback title-drag-moved(float, float);
     callback title-drag-ended();
     callback minimize-clicked();
     callback close-clicked();
-    callback escape-pressed();
 
     title: root.product-name;
     no-frame: true;
@@ -45,8 +57,14 @@ export component LauncherWindow inherits Window {
 
             key-pressed(event) => {
                 if (event.text == Key.Escape) {
-                    root.escape-pressed();
-                    return accept;
+                    if (root.settings-open) {
+                        root.settings-open = false;
+                        return accept;
+                    }
+                    if (root.profile-open) {
+                        root.profile-open = false;
+                        return accept;
+                    }
                 }
                 return reject;
             }
@@ -73,46 +91,64 @@ export component LauncherWindow inherits Window {
                     }
                 }
 
-                VerticalLayout {
-                    alignment: center;
-                    spacing: 10px;
+                Rectangle {
+                    background: transparent;
+                    vertical-stretch: 1;
 
-                    Text {
-                        text: "RENDOG LAUNCHER";
-                        color: Theme.heading;
-                        font-size: Typo.hero-title;
-                        font-weight: Typo.bold;
-                        letter-spacing: Typo.hero-title-spacing;
-                        horizontal-alignment: center;
+                    VerticalLayout {
+                        padding-left: Theme.content-pad-x;
+                        padding-right: Theme.content-pad-x;
+                        padding-top: Theme.content-pad-top;
+                        padding-bottom: Theme.content-pad-bottom;
+                        spacing: 0px;
+
+                        HorizontalLayout {
+                            vertical-stretch: 0;
+
+                            Rectangle {
+                                background: transparent;
+                                horizontal-stretch: 1;
+                            }
+
+                            SecondaryButton {
+                                text: "Settings";
+                                clicked => {
+                                    root.settings-open = true;
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            background: transparent;
+                            vertical-stretch: 1;
+                        }
+
+                        Text {
+                            text: root.launcher-version;
+                            color: Theme.faint;
+                            font-size: Typo.footer;
+                            vertical-stretch: 0;
+                        }
                     }
 
-                    Text {
-                        text: root.server-address + " · Minecraft " + root.minecraft-version;
-                        color: Theme.muted;
-                        font-size: Typo.hero-subtitle;
-                        letter-spacing: Typo.hero-subtitle-spacing;
-                        horizontal-alignment: center;
+                    Popover {
+                        width: 100%;
+                        height: 100%;
+                        open: root.profile-open;
+                        anchor-x: Theme.content-pad-x;
+                        anchor-y: Theme.content-pad-top + Theme.popover-offset-y;
+                        close => {
+                            root.profile-open = false;
+                        }
                     }
 
-                    Text {
-                        text: root.launcher-version;
-                        color: Theme.faint;
-                        font-size: Typo.footer;
-                        horizontal-alignment: center;
-                    }
-
-                    Text {
-                        text: "프로그램 " + root.program-directory;
-                        color: Theme.faint;
-                        font-size: Typo.footer;
-                        horizontal-alignment: center;
-                    }
-
-                    Text {
-                        text: "데이터 " + root.data-directory;
-                        color: Theme.faint;
-                        font-size: Typo.footer;
-                        horizontal-alignment: center;
+                    ModalOverlay {
+                        width: 100%;
+                        height: 100%;
+                        open: root.settings-open;
+                        close => {
+                            root.settings-open = false;
+                        }
                     }
                 }
             }
