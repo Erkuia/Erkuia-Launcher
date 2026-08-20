@@ -4,6 +4,8 @@ export component ValueSlider inherits Rectangle {
     in property <int> minimum: 30;
     in property <int> maximum: 150;
     in property <int> step: 1;
+    in property <int> snap-step: 30;
+    in property <int> snap-distance: 3;
     in property <[int]> ticks: [30, 60, 90, 120, 150];
     in-out property <int> value: 105;
     callback changed(int);
@@ -15,9 +17,20 @@ export component ValueSlider inherits Rectangle {
     height: Theme.slider-height;
     background: transparent;
 
-    function snapped(position: length) -> int {
+    function nearest-stop(value: int) -> int {
         return Math.max(root.minimum, Math.min(root.maximum,
-            root.minimum + Math.round((position / root.width) * (root.maximum - root.minimum) * 1.0 / root.step) * root.step));
+            root.minimum + Math.round((value - root.minimum) * 1.0 / root.snap-step) * root.snap-step));
+    }
+
+    function magnet(value: int) -> int {
+        return (root.snap-step > 0 && Math.abs(value - root.nearest-stop(value)) <= root.snap-distance)
+            ? root.nearest-stop(value)
+            : value;
+    }
+
+    function snapped(position: length) -> int {
+        return root.magnet(Math.max(root.minimum, Math.min(root.maximum,
+            root.minimum + Math.round((position / root.width) * (root.maximum - root.minimum) * 1.0 / root.step) * root.step)));
     }
 
     function commit(position: length) {
@@ -31,24 +44,18 @@ export component ValueSlider inherits Rectangle {
         visible: touch.has-hover || touch.pressed;
         x: root.width * root.fraction - self.width / 2;
         y: 0px;
+        width: label.preferred-width + 16px;
         height: Theme.slider-tooltip-height;
         border-radius: Theme.radius-tooltip;
         background: Theme.tooltip;
 
-        HorizontalLayout {
-            padding-left: 8px;
-            padding-right: 8px;
-            padding-top: 3px;
-            padding-bottom: 3px;
-
-            Text {
-                text: root.value;
-                color: Theme.tooltip-text;
-                font-size: Typo.footer;
-                font-weight: Typo.bold;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
+        label := Text {
+            text: root.value;
+            color: Theme.tooltip-text;
+            font-size: Typo.footer;
+            font-weight: Typo.bold;
+            horizontal-alignment: center;
+            vertical-alignment: center;
         }
     }
 
