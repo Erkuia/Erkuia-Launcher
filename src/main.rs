@@ -47,9 +47,6 @@ fn main() -> anyhow::Result<()> {
     let is_admin = elevation::is_running_as_admin().unwrap_or(false);
     let resuming_elevated = elevation::is_elevated_install_mode();
 
-    // Resolved once, in whichever process started first. When we relaunch
-    // elevated the value is carried over on the command line instead of being
-    // expanded again inside the administrator's environment.
     let data_dir: PathBuf = elevation::data_dir_from_args()
         .map(PathBuf::from)
         .or_else(|| install::resolve_data_dir(&manifest).ok())

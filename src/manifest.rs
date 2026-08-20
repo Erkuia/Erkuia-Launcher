@@ -35,9 +35,6 @@ pub struct Installer {
 pub struct InstallPlan {
     #[serde(rename = "defaultInstallDir")]
     pub default_install_dir: String,
-    /// Writable directory for everything the launcher mutates at runtime
-    /// (game files, mods, config, logs). Kept out of the install directory so
-    /// the launcher never needs administrator rights after installation.
     #[serde(rename = "dataDir")]
     pub data_dir: String,
     pub components: Vec<Component>,
@@ -52,8 +49,6 @@ pub struct Component {
     pub url: Option<String>,
     #[serde(rename = "fileName")]
     pub file_name: String,
-    /// Which root `target_path` is relative to. Defaults to the install
-    /// directory so older component entries keep working unchanged.
     #[serde(rename = "targetRoot", default)]
     pub target_root: TargetRoot,
     #[serde(rename = "targetPath")]
@@ -65,10 +60,8 @@ pub struct Component {
 #[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum TargetRoot {
-    /// `%ProgramFiles%\Rendog Launcher` — program binaries, admin-only writes.
     #[default]
     Install,
-    /// `%APPDATA%\RendogLauncher` — user-writable runtime data.
     Data,
 }
 
@@ -82,7 +75,6 @@ pub struct Uninstall {
     pub remove_start_menu_shortcut: bool,
     #[serde(rename = "preserveUserDataByDefault")]
     pub preserve_user_data_by_default: bool,
-    /// Folder name the data directory is renamed to when it is kept.
     #[serde(rename = "userDataBackupName")]
     pub user_data_backup_name: String,
 }

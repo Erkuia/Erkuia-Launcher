@@ -18,9 +18,6 @@ type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
 pub struct InstallOptions {
     pub install_dir: PathBuf,
-    /// Writable runtime directory. Resolved before UAC elevation so the
-    /// elevated process writes into the *logged-on* Windows user's profile,
-    /// not the profile of whichever Windows administrator answered the prompt.
     pub data_dir: PathBuf,
     pub create_desktop_shortcut: bool,
 }
@@ -122,11 +119,6 @@ fn installer_cache_dir() -> anyhow::Result<PathBuf> {
     Ok(std::env::temp_dir().join("rendog-launcher-installer"))
 }
 
-/// Resolve the writable runtime directory for the current Windows user.
-///
-/// Must be called *before* UAC elevation: inside the elevated process
-/// `%APPDATA%` can resolve to a different Windows user folder when a standard
-/// user answers the prompt with administrator credentials.
 pub fn resolve_data_dir(manifest: &Manifest) -> anyhow::Result<PathBuf> {
     paths::expand(&manifest.install_plan.data_dir)
 }

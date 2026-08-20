@@ -18,12 +18,6 @@ pub fn install_dir_from_args() -> Option<String> {
     value_after_arg("--install-dir")
 }
 
-/// The writable data directory resolved by the *pre-elevation* process.
-///
-/// `%APPDATA%` must not be re-resolved after UAC elevation. If a standard user
-/// answers the UAC prompt with a different Windows administrator, the elevated
-/// process runs under that administrator's Windows profile and `%APPDATA%`
-/// would point at the wrong user folder.
 pub fn data_dir_from_args() -> Option<String> {
     value_after_arg("--data-dir")
 }

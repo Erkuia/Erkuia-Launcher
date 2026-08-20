@@ -14,12 +14,6 @@ use crate::{
 
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
-/// The two roots a component can be installed into.
-///
-/// `install_dir` holds program binaries and normally lives under
-/// `%ProgramFiles%`, so it is only writable while elevated. `data_dir` holds
-/// everything the launcher mutates later (game files, mods, config) and must
-/// stay writable without administrator rights.
 #[derive(Debug, Clone)]
 pub struct InstallRoots {
     pub install_dir: PathBuf,

@@ -27,9 +27,6 @@ pub fn register_uninstaller(
     });
 
     let installer_path = copy_uninstaller_to_install_dir(install_dir)?;
-    // The data directory is baked into the uninstall command at install time.
-    // Windows runs the uninstaller elevated, where re-expanding `%APPDATA%`
-    // could point at the wrong user profile.
     let uninstall_command = format!(
         "{} {} --install-dir {} --data-dir {}",
         powershell::quote_command_line_arg(&installer_path.display().to_string()),
@@ -115,8 +112,6 @@ fn run_uninstall(manifest: &Manifest, install_dir: &Path, data_dir: &Path) -> an
     Ok(())
 }
 
-/// Keep the launcher's runtime data by renaming the data directory next to
-/// itself, so a later reinstall starts clean but the user keeps their files.
 fn preserve_user_data(manifest: &Manifest, data_dir: &Path) -> anyhow::Result<()> {
     if !data_dir.exists() {
         return Ok(());
