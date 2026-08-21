@@ -403,6 +403,19 @@ mod tests {
         assert_eq!(manifest.required_mods().len(), 2);
     }
 
+    /// The bundled copy can never carry its own size or hash — it lives inside
+    /// the very file it would describe. The version still has to be right: a
+    /// bundled version ahead of the binary makes an offline launcher announce an
+    /// update to itself.
+    #[test]
+    fn the_bundled_manifest_version_matches_the_binary() {
+        assert_eq!(
+            builtin().launcher.version,
+            env!("CARGO_PKG_VERSION"),
+            "launcher-manifest.json 의 launcher.version 을 Cargo.toml 과 맞춰 주세요."
+        );
+    }
+
     #[test]
     fn the_bundled_manifest_pins_fabric_api_and_the_client() {
         let manifest = builtin();
