@@ -14,6 +14,9 @@ type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 const UNINSTALL_KEY: &str =
     r"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\RendogLauncher";
 
+/// Shown as the publisher in Windows Settings and in the app list.
+const PUBLISHER: &str = "폴리큐";
+
 pub fn register_uninstaller(
     manifest: &Manifest,
     install_dir: &Path,
@@ -49,7 +52,7 @@ pub fn register_uninstaller(
         powershell::escape_single_quoted(UNINSTALL_KEY),
         env!("CARGO_PKG_VERSION"),
         powershell::escape_single_quoted(UNINSTALL_KEY),
-        "Rendog",
+        powershell::escape_single_quoted(PUBLISHER),
         powershell::escape_single_quoted(UNINSTALL_KEY),
         powershell::escape_single_quoted(&install_dir.display().to_string()),
         powershell::escape_single_quoted(UNINSTALL_KEY),

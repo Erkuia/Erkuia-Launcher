@@ -10,7 +10,7 @@ fn main() {
             .set_icon("assets/rendog-installer.ico")
             .set("ProductName", "Rendog Launcher Installer")
             .set("FileDescription", "Rendog Launcher Installer")
-            .set("CompanyName", "Rendog")
+            .set("CompanyName", "폴리큐")
             .set("OriginalFilename", "RendogLauncherInstaller.exe");
         resource
             .compile()
