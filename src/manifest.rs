@@ -149,9 +149,6 @@ impl Manifest {
         self.mods.iter().filter(|item| item.required).collect()
     }
 
-    pub fn find_mod(&self, id: &str) -> Option<&ModArtifact> {
-        self.mods.iter().find(|item| item.id == id)
-    }
 }
 
 fn cache_file(cache_dir: &Path) -> std::path::PathBuf {
@@ -260,16 +257,20 @@ mod tests {
         assert_eq!(manifest.mods.len(), 1);
     }
 
+    fn client_mod(manifest: &Manifest) -> &ModArtifact {
+        manifest
+            .required_mods()
+            .into_iter()
+            .find(|artifact| artifact.id == "rendog-client")
+            .expect("the sample pins the client mod")
+    }
+
     #[test]
     fn required_mods_are_selectable() {
         let manifest = Manifest::parse(SAMPLE).unwrap();
 
         assert_eq!(manifest.required_mods().len(), 1);
-        assert_eq!(
-            manifest.find_mod("rendog-client").unwrap().file_name,
-            "RendogClient-Delta.jar"
-        );
-        assert!(manifest.find_mod("missing").is_none());
+        assert_eq!(client_mod(&manifest).file_name, "RendogClient-Delta.jar");
     }
 
     #[test]
@@ -277,7 +278,7 @@ mod tests {
         let manifest = Manifest::parse(SAMPLE).unwrap();
 
         assert_eq!(
-            manifest.find_mod("rendog-client").unwrap().sha256,
+            client_mod(&manifest).sha256,
             "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
         );
     }

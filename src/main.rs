@@ -550,13 +550,13 @@ fn start_self_update(app: &LauncherWindow, state: &AppState) {
     task::spawn(app, ErrorCode::Update, move |reporter| {
         let exe = std::env::current_exe().context("현재 실행 파일 경로를 알 수 없어요.")?;
 
-        reporter.progress(task::Stage::Download, 0.0, "새 런처를 받는 중...");
+        reporter.progress(Stage::Download, 0.0, "새 런처를 받는 중...");
         let staged = selfupdate::stage(&release, &paths.cache_dir(), reporter, &cancel)?;
 
         reporter.waiting("런처를 교체하는 중...");
         selfupdate::apply(&staged, &exe)?;
 
-        reporter.progress(task::Stage::Launch, 1.0, "새 런처를 실행합니다.");
+        reporter.progress(Stage::Launch, 1.0, "새 런처를 실행합니다.");
         shell::open(&exe.display().to_string())?;
 
         let _ = weak.upgrade_in_event_loop(|app| {
