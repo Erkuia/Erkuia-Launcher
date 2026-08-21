@@ -54,7 +54,7 @@ fn main() {
             .set_icon("assets/rendog-launcher.ico")
             .set("ProductName", "Rendog Launcher")
             .set("FileDescription", "Rendog Launcher")
-            .set("CompanyName", "Rendog")
+            .set("CompanyName", "폴리큐")
             .set("OriginalFilename", "RendogLauncher.exe");
         resource
             .compile()
