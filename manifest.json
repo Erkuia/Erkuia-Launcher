@@ -42,8 +42,8 @@
                                                "targetPath":  "RendogLauncher.exe",
                                                "status":  "ready",
                                                "url":  "https://github.com/foliq/Rendog-Launcher/releases/latest/download/RendogLauncher.exe",
-                                               "size":  18276352,
-                                               "sha256":  "047d6ce3768e58a7dd480f0f04f4c0ad620fa80d1b6a9f583d00bb979894aaf2"
+                                               "size":  18275840,
+                                               "sha256":  "bce23621b031995b7b5c3d4d0d256a907dbf5cde19f4721309f5de19c1f2e9c2"
                                            }
                                        ]
                     },
