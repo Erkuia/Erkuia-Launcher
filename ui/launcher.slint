@@ -15,6 +15,11 @@ export component LauncherWindow inherits Window {
     in-out property <string> update-version;
     in-out property <string> server-address: "erkuia.kr";
     in-out property <string> minecraft-version: "1.21.4";
+    in-out property <bool> server-online;
+    in-out property <bool> server-idle: true;
+    in-out property <string> server-status: "대기 중";
+    in-out property <string> server-players: "0 / 0";
+    in-out property <string> server-ping: "0ms";
     in-out property <string> program-directory: "";
     in-out property <string> data-directory: "";
 
@@ -208,9 +213,70 @@ export component LauncherWindow inherits Window {
                                 }
                             }
 
+                            // Hidden while the launcher is working: the row sits
+                            // where the progress bar appears, and a status that
+                            // shifts around mid-launch reads as a glitch.
+                            if !root.busy: HorizontalLayout {
+                                alignment: center;
+                                padding-top: 20px;
+                                spacing: 14px;
+
+                                VerticalLayout {
+                                    alignment: center;
+
+                                    Rectangle {
+                                        width: 7px;
+                                        height: 7px;
+                                        border-radius: 3.5px;
+                                        background: root.server-online
+                                            ? #2f9e44
+                                            : (root.server-idle ? Theme.control-off : Theme.danger);
+                                    }
+                                }
+
+                                Text {
+                                    text: root.server-status;
+                                    color: root.server-online ? Theme.body : Theme.disabled-text;
+                                    font-size: Typo.caption;
+                                    font-weight: Typo.medium;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    text: "·";
+                                    color: Theme.control;
+                                    font-size: Typo.caption;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    text: root.server-players;
+                                    color: root.server-online ? Theme.body : Theme.disabled-text;
+                                    font-size: Typo.caption;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    text: "·";
+                                    color: Theme.control;
+                                    font-size: Typo.caption;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    text: root.server-ping;
+                                    color: root.server-online ? Theme.body : Theme.disabled-text;
+                                    font-size: Typo.caption;
+                                    vertical-alignment: center;
+                                }
+                            }
+
                             HorizontalLayout {
                                 alignment: center;
-                                padding-top: 36px;
+                                // The status row above disappears while busy, so
+                                // this absorbs its height and the button and the
+                                // progress bar land on the same line.
+                                padding-top: root.busy ? 36px : 16px;
 
                                 if !root.busy: PrimaryButton {
                                     text: "시작";

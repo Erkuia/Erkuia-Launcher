@@ -29,6 +29,7 @@ mod paths;
 mod runtime;
 mod selfupdate;
 mod shell;
+mod status;
 mod task;
 mod update;
 
@@ -508,6 +509,73 @@ fn start_up(app: &LauncherWindow, state: &AppState) {
     apply_accounts(app, state);
     refresh_mods(app, state);
     check_for_update(app, state);
+    watch_server_status(app, state);
+}
+
+/// Keeps the status row above the start button current.
+///
+/// The tick is a second but a query only goes out every ten, so signing in
+/// refreshes the row almost immediately instead of leaving "대기 중" sitting
+/// there for most of a poll interval. The thread is detached and never joined:
+/// it holds only a weak handle, so it stops mattering the moment the window
+/// closes, and every failure it can hit is already reported as offline.
+fn watch_server_status(app: &LauncherWindow, state: &AppState) {
+    const TICK: Duration = Duration::from_secs(1);
+    const INTERVAL: Duration = Duration::from_secs(10);
+
+    let owner = state.clone();
+    let weak = app.as_weak();
+
+    std::thread::spawn(move || {
+        let mut last_query: Option<std::time::Instant> = None;
+        let mut was_signed_in = false;
+
+        loop {
+            let signed_in = owner.snapshot().selected().is_some();
+            let just_signed_in = signed_in && !was_signed_in;
+            was_signed_in = signed_in;
+
+            let due = match last_query {
+                Some(at) => at.elapsed() >= INTERVAL,
+                None => true,
+            };
+
+            if !signed_in {
+                // Cleared rather than left stale: after a logout the previous
+                // player count is no longer something this launcher is claiming.
+                last_query = None;
+
+                if publish(&weak, status::ServerStatus::Idle).is_err() {
+                    return;
+                }
+            } else if just_signed_in || due {
+                let address = owner.manifest().server.address;
+                let found = status::query(&address);
+
+                last_query = Some(std::time::Instant::now());
+
+                if publish(&weak, found).is_err() {
+                    return;
+                }
+            }
+
+            std::thread::sleep(TICK);
+        }
+    });
+}
+
+/// `Err` means the window is gone, which is the loop's cue to stop.
+fn publish(
+    weak: &slint::Weak<LauncherWindow>,
+    found: status::ServerStatus,
+) -> Result<(), slint::EventLoopError> {
+    weak.upgrade_in_event_loop(move |app| {
+        app.set_server_online(found.is_online());
+        app.set_server_idle(found.is_idle());
+        app.set_server_status(found.label().into());
+        app.set_server_players(found.players_text().into());
+        app.set_server_ping(found.ping_text().into());
+    })
 }
 
 fn pending_update(state: &AppState) -> Option<update::Version> {
