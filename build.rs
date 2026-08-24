@@ -54,7 +54,7 @@ fn main() {
             .set_icon("assets/erkuia-launcher.ico")
             .set("ProductName", "Erkuia Launcher")
             .set("FileDescription", "Erkuia Launcher")
-            .set("CompanyName", "폴리큐")
+            .set("CompanyName", "Erkuia")
             .set("OriginalFilename", "Erkuia-Launcher.exe");
         resource
             .compile()
