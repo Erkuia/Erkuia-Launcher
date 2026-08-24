@@ -1,4 +1,4 @@
-# Rendog Launcher Installer
+# [Rendog Launcher Installer](docs.md)
 
 Custom online installer for Rendog Launcher.
 
