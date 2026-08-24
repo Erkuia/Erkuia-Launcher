@@ -3,11 +3,11 @@ fn main() {
 
     #[cfg(target_os = "windows")]
     {
-        println!("cargo:rerun-if-changed=assets/rendog-installer.ico");
+        println!("cargo:rerun-if-changed=assets/erkuia-installer.ico");
 
         let mut resource = winresource::WindowsResource::new();
         resource
-            .set_icon("assets/rendog-installer.ico")
+            .set_icon("assets/erkuia-installer.ico")
             .set("ProductName", "Rendog Launcher Installer")
             .set("FileDescription", "Rendog Launcher Installer")
             .set("CompanyName", "폴리큐")

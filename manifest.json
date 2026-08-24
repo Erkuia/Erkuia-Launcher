@@ -1,88 +1,88 @@
 {
-    "schemaVersion":  1,
-    "product":  {
-                    "id":  "rendog-launcher",
-                    "name":  "Rendog Launcher",
-                    "minecraftVersion":  "1.20.4",
-                    "serverAddress":  "rendog.kr"
-                },
-    "installer":  {
-                      "id":  "rendog-launcher-installer",
-                      "name":  "Rendog Launcher Installer",
-                      "mode":  "online",
-                      "requiresAdminOnInstall":  true,
-                      "allowPendingRequiredComponents":  true,
-                      "defaultRunAfterInstall":  true,
-                      "defaultCreateDesktopShortcut":  true
-                  },
-    "installPlan":  {
-                        "defaultInstallDir":  "%ProgramFiles%\\Rendog Launcher",
-                        "dataDir":  "%APPDATA%\\RendogLauncher",
-                        "components":  [
-                                           {
-                                               "id":  "rendog-client",
-                                               "name":  "RendogClient Delta",
-                                               "kind":  "minecraft-mod",
-                                               "required":  true,
-                                               "status":  "ready",
-                                               "url":  "https://github.com/MellDa1024/RendogClient-1.20.4/releases/download/Delta/RendogClient-Delta.jar",
-                                               "fileName":  "RendogClient-Delta.jar",
-                                               "targetRoot":  "data",
-                                               "targetPath":  "minecraft\\mods\\RendogClient-Delta.jar",
-                                               "size":  8709016,
-                                               "sha256":  "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
-                                           },
-                                           {
-                                               "id":  "rendog-launcher",
-                                               "name":  "Rendog Launcher",
-                                               "kind":  "launcher",
-                                               "required":  true,
-                                               "fileName":  "RendogLauncher.exe",
-                                               "targetRoot":  "install",
-                                               "targetPath":  "RendogLauncher.exe",
-                                               "status":  "ready",
-                                               "url":  "https://github.com/foliq/Rendog-Launcher/releases/latest/download/RendogLauncher.exe",
-                                               "size":  18275840,
-                                               "sha256":  "bce23621b031995b7b5c3d4d0d256a907dbf5cde19f4721309f5de19c1f2e9c2"
-                                           }
-                                       ]
-                    },
-    "uninstall":  {
-                      "enabled":  true,
-                      "displayName":  "Rendog Launcher",
-                      "removeDesktopShortcut":  true,
-                      "removeStartMenuShortcut":  true,
-                      "preserveUserDataByDefault":  true,
-                      "userDataBackupName":  "Rendog Launcher User Data"
-                  },
-    "progressWeights":  {
-                            "prepare":  {
-                                            "start":  0,
-                                            "end":  5
-                                        },
-                            "download":  {
-                                             "start":  5,
-                                             "end":  50
-                                         },
-                            "verify":  {
-                                           "start":  50,
-                                           "end":  65
-                                       },
-                            "installFiles":  {
-                                                 "start":  65,
-                                                 "end":  88
-                                             },
-                            "shortcuts":  {
-                                              "start":  88,
-                                              "end":  94
-                                          },
-                            "registerUninstaller":  {
-                                                        "start":  94,
-                                                        "end":  98
-                                                    },
-                            "finalize":  {
-                                             "start":  98,
-                                             "end":  100
-                                         }
-                        }
+    "schemaVersion": 1,
+    "product": {
+        "id": "rendog-launcher",
+        "name": "Rendog Launcher",
+        "minecraftVersion": "1.20.4",
+        "serverAddress": "rendog.kr"
+    },
+    "installer": {
+        "id": "rendog-launcher-installer",
+        "name": "Rendog Launcher Installer",
+        "mode": "online",
+        "requiresAdminOnInstall": true,
+        "allowPendingRequiredComponents": true,
+        "defaultRunAfterInstall": true,
+        "defaultCreateDesktopShortcut": true
+    },
+    "installPlan": {
+        "defaultInstallDir": "%ProgramFiles%\\Rendog Launcher",
+        "dataDir": "%APPDATA%\\RendogLauncher",
+        "components": [
+            {
+                "id": "rendog-client",
+                "name": "RendogClient Delta",
+                "kind": "minecraft-mod",
+                "required": true,
+                "status": "ready",
+                "url": "https://github.com/MellDa1024/RendogClient-1.20.4/releases/download/Delta/RendogClient-Delta.jar",
+                "fileName": "RendogClient-Delta.jar",
+                "targetRoot": "data",
+                "targetPath": "minecraft\\mods\\RendogClient-Delta.jar",
+                "size": 8709016,
+                "sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
+            },
+            {
+                "id": "rendog-launcher",
+                "name": "Rendog Launcher",
+                "kind": "launcher",
+                "required": true,
+                "fileName": "RendogLauncher.exe",
+                "targetRoot": "install",
+                "targetPath": "RendogLauncher.exe",
+                "status": "ready",
+                "url": "https://github.com/foliq/Rendog-Launcher/releases/latest/download/RendogLauncher.exe",
+                "size": 18275840,
+                "sha256": "bce23621b031995b7b5c3d4d0d256a907dbf5cde19f4721309f5de19c1f2e9c2"
+            }
+        ]
+    },
+    "uninstall": {
+        "enabled": true,
+        "displayName": "Rendog Launcher",
+        "removeDesktopShortcut": true,
+        "removeStartMenuShortcut": true,
+        "preserveUserDataByDefault": true,
+        "userDataBackupName": "Rendog Launcher User Data"
+    },
+    "progressWeights": {
+        "prepare": {
+            "start": 0,
+            "end": 5
+        },
+        "download": {
+            "start": 5,
+            "end": 50
+        },
+        "verify": {
+            "start": 50,
+            "end": 65
+        },
+        "installFiles": {
+            "start": 65,
+            "end": 88
+        },
+        "shortcuts": {
+            "start": 88,
+            "end": 94
+        },
+        "registerUninstaller": {
+            "start": 94,
+            "end": 98
+        },
+        "finalize": {
+            "start": 98,
+            "end": 100
+        }
+    }
 }
