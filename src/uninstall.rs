@@ -15,7 +15,7 @@ const UNINSTALL_KEY: &str =
     r"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ErkuiaLauncher";
 
 /// Shown as the publisher in Windows Settings and in the app list.
-const PUBLISHER: &str = "폴리큐";
+const PUBLISHER: &str = "Erkuia";
 
 pub fn register_uninstaller(
     manifest: &Manifest,

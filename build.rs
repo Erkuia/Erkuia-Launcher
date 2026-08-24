@@ -10,7 +10,7 @@ fn main() {
             .set_icon("assets/erkuia-installer.ico")
             .set("ProductName", "Erkuia Launcher Installer")
             .set("FileDescription", "Erkuia Launcher Installer")
-            .set("CompanyName", "폴리큐")
+            .set("CompanyName", "Erkuia")
             .set("OriginalFilename", "Erkuia-Launcher-Installer.exe");
         resource
             .compile()
