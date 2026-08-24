@@ -1,12 +1,14 @@
-# [Rendog Launcher Installer](docs.md)
+# [Erkuia Launcher Installer](docs.md)
 
-Custom online installer for Rendog Launcher.
+Custom online installer for Erkuia Launcher.
 
 ## Identity
 
-- Package name: `rendog-launcher-installer`
-- Product installed by this app: `Rendog Launcher`
-- Target binary name: `RendogLauncherInstaller.exe`
+- Publisher / company name: `Erkuia`
+- Installer name: `Erkuia Launcher Installer`
+- Product installed by this app: `Erkuia Launcher`
+- Target binary name: `Erkuia-Launcher-Installer.exe`
+- Launcher binary name: `Erkuia-Launcher.exe`
 - Install mode: online only
 - UI stack: Rust + Slint
 
@@ -17,8 +19,8 @@ administrator rights; everything the launcher mutates later must not.
 
 | Root | Path | Contents | Writable without admin |
 | --- | --- | --- | --- |
-| `install` | `%ProgramFiles%\Rendog Launcher` | `RendogLauncher.exe`, `RendogLauncherInstaller.exe` | No |
-| `data` | `%APPDATA%\RendogLauncher` | `minecraft\` (game files, mods, config, logs) | Yes |
+| `install` | `%ProgramFiles%\Erkuia Launcher` | `Erkuia-Launcher.exe`, `Erkuia-Launcher-Installer.exe` | No |
+| `data` | `%APPDATA%\ErkuiaLauncher` | `minecraft\` (game files, mods, config, logs) | Yes |
 
 Each manifest component picks its root with `targetRoot` (`install` or `data`,
 defaulting to `install`), and `targetPath` is relative to that root.
@@ -54,28 +56,25 @@ administrator credentials. The same value is baked into the registered
   on a font that happens to carry U+2713.
 - Shows `create desktop shortcut` and `run launcher after the wizard closes` on the
   complete screen, both checked by default.
-- Creates desktop and start menu shortcuts when `RendogLauncher.exe` is available,
+- Creates desktop and start menu shortcuts when `Erkuia-Launcher.exe` is available,
   and reconciles the desktop shortcut again when the complete screen is closed.
 - Starts the installed launcher through the shell so it does not inherit the
   installer's administrator token.
 - Registers a Windows uninstaller entry under HKLM.
 - Re-runs the uninstaller with administrator permission when needed.
-- Skips launch and shortcut creation gracefully while `RendogLauncher.exe` is pending.
+- Skips launch and shortcut creation gracefully while `Erkuia-Launcher.exe` is pending.
 - Applies a 60 second timeout to online component downloads.
 
 ## Current Install Components
 
 ### Ready
 
-- `RendogClient-Delta.jar`
-- Source: `https://github.com/MellDa1024/RendogClient-1.20.4/releases/download/Delta/RendogClient-Delta.jar`
-- Target root: `data`
-- Target path: `minecraft\mods\RendogClient-Delta.jar` (→ `%APPDATA%\RendogLauncher\minecraft\mods\`)
-- SHA-256: `72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a`
+- No standalone client mod component is downloaded by the installer.
+- The launcher-owned mod is embedded in `Erkuia-Launcher.exe` and written to `mods/` on launch.
 
 ### Pending
 
-- `RendogLauncher.exe`
+- `Erkuia-Launcher.exe`
 - Target root: `install`
 - Reason: launcher artifact is intentionally deferred.
 
@@ -106,7 +105,7 @@ Start screen
   -> register uninstaller
   -> complete screen
   -> apply the desktop shortcut option on close
-  -> run RendogLauncher.exe when "run launcher after the wizard closes" is checked
+  -> run Erkuia-Launcher.exe when "run launcher after the wizard closes" is checked
 ```
 
 ## Current Implementation Flow
@@ -132,10 +131,10 @@ UI install button
 
 ```text
 Windows Apps uninstall entry
-  -> RendogLauncherInstaller.exe --uninstall --install-dir <path>
+  -> Erkuia-Launcher-Installer.exe --uninstall --install-dir <path>
   -> request administrator permission when needed
   -> remove desktop/start menu shortcuts
-  -> rename %APPDATA%\RendogLauncher to "Rendog Launcher User Data" when preserving
+  -> rename %APPDATA%\ErkuiaLauncher to "Erkuia Launcher User Data" when preserving
   -> remove HKLM uninstall entry
   -> schedule install directory deletion
 ```
