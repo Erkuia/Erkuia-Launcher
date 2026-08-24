@@ -244,7 +244,7 @@ mod tests {
     impl TempDir {
         fn new(tag: &str) -> Self {
             let path = std::env::temp_dir().join(format!(
-                "rendog-dl-{tag}-{}-{}",
+                "erkuia-dl-{tag}-{}-{}",
                 std::process::id(),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)

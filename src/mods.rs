@@ -447,7 +447,7 @@ mod tests {
     impl Fixture {
         fn new(tag: &str) -> Self {
             let root = std::env::temp_dir().join(format!(
-                "rendog-mods-{tag}-{}-{}",
+                "erkuia-mods-{tag}-{}-{}",
                 std::process::id(),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -494,7 +494,7 @@ mod tests {
                     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
                 },
                 "minecraft": { "version": "1.20.4", "fabricLoader": "0.15.11" },
-                "server": { "address": "rendog.kr" },
+                "server": { "address": "erkuia.kr" },
                 "mods": [{
                     "id": "rendog-client",
                     "name": "RendogClient",
@@ -661,7 +661,7 @@ mod tests {
 
     #[test]
     fn missing_folders_are_treated_as_empty() {
-        let root = std::env::temp_dir().join(format!("rendog-mods-none-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("erkuia-mods-none-{}", std::process::id()));
 
         assert!(scan(&root.join("mods"), &root.join("mods-disabled"), None).is_empty());
     }

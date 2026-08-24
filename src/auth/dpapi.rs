@@ -1,4 +1,4 @@
-pub const ENTROPY: &[u8] = b"RendogLauncher/accounts/v1";
+pub const ENTROPY: &[u8] = b"ErkuiaLauncher/accounts/v1";
 
 #[cfg(windows)]
 mod imp {

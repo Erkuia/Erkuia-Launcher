@@ -17,7 +17,7 @@ const ERROR_BODY_LIMIT: usize = 300;
 static CLIENT: OnceLock<Client> = OnceLock::new();
 
 pub fn user_agent() -> String {
-    format!("RendogLauncher/{}", env!("CARGO_PKG_VERSION"))
+    format!("ErkuiaLauncher/{}", env!("CARGO_PKG_VERSION"))
 }
 
 pub fn client() -> anyhow::Result<Client> {
@@ -174,6 +174,6 @@ mod tests {
 
     #[test]
     fn user_agent_carries_the_version() {
-        assert_eq!(user_agent(), format!("RendogLauncher/{}", env!("CARGO_PKG_VERSION")));
+        assert_eq!(user_agent(), format!("ErkuiaLauncher/{}", env!("CARGO_PKG_VERSION")));
     }
 }

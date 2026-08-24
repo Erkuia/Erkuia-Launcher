@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 
-pub const DATA_DIR_NAME: &str = "RendogLauncher";
+pub const DATA_DIR_NAME: &str = "ErkuiaLauncher";
 
 #[derive(Debug, Clone)]
 pub struct Paths {
@@ -98,7 +98,7 @@ mod tests {
     use super::*;
 
     fn paths() -> Paths {
-        Paths::with_data_dir(PathBuf::from(r"C:\Users\test\AppData\Roaming\RendogLauncher"))
+        Paths::with_data_dir(PathBuf::from(r"C:\Users\test\AppData\Roaming\ErkuiaLauncher"))
     }
 
     #[test]
@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn bootstrap_creates_every_directory_and_is_repeatable() {
         let root = std::env::temp_dir().join(format!(
-            "rendog-launcher-test-{}-{}",
+            "erkuia-launcher-test-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

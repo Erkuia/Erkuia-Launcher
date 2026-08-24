@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn the_bundled_runtime_comes_first() {
-        let runtime = std::env::temp_dir().join(format!("rendog-java-{}", std::process::id()));
+        let runtime = std::env::temp_dir().join(format!("erkuia-java-{}", std::process::id()));
         std::fs::create_dir_all(runtime.join("jdk-21.0.3+9")).unwrap();
 
         let homes = candidates(&runtime);
@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn candidates_are_deduplicated() {
-        let runtime = std::env::temp_dir().join(format!("rendog-java-dup-{}", std::process::id()));
+        let runtime = std::env::temp_dir().join(format!("erkuia-java-dup-{}", std::process::id()));
         std::fs::create_dir_all(&runtime).unwrap();
 
         let homes = candidates(&runtime);
@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn a_directory_without_a_java_binary_is_not_an_install() {
-        let empty = std::env::temp_dir().join(format!("rendog-java-empty-{}", std::process::id()));
+        let empty = std::env::temp_dir().join(format!("erkuia-java-empty-{}", std::process::id()));
         std::fs::create_dir_all(&empty).unwrap();
 
         assert!(probe(&empty).is_none());

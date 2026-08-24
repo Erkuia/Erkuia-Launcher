@@ -13,7 +13,7 @@ use crate::{
     mc::{fabric::LoaderPlan, version::{DownloadTarget, VersionPlan}},
 };
 
-pub const LAUNCHER_BRAND: &str = "RendogLauncher";
+pub const LAUNCHER_BRAND: &str = "ErkuiaLauncher";
 pub const USER_TYPE: &str = "msa";
 pub const VERSION_TYPE: &str = "release";
 
@@ -409,7 +409,7 @@ mod tests {
             username: "KkulBee_",
             uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5",
             access_token: "TOKEN",
-            server_address: "rendog.kr",
+            server_address: "erkuia.kr",
             heap_megabytes: 4096,
             launcher_version: "0.1.0",
             log_path: Path::new("/mc/logs/minecraft.log"),
@@ -588,7 +588,7 @@ mod tests {
             .position(|argument| argument == "--quickPlayMultiplayer")
             .map(|index| arguments[index + 1].as_str());
 
-        assert_eq!(address, Some("rendog.kr"));
+        assert_eq!(address, Some("erkuia.kr"));
     }
 
     #[test]
@@ -600,8 +600,8 @@ mod tests {
     #[test]
     fn the_address_is_trimmed_before_it_reaches_the_client() {
         assert_eq!(
-            quick_play_arguments("  rendog.kr \n"),
-            vec!["--quickPlayMultiplayer".to_string(), "rendog.kr".to_string()]
+            quick_play_arguments("  erkuia.kr \n"),
+            vec!["--quickPlayMultiplayer".to_string(), "erkuia.kr".to_string()]
         );
     }
 
@@ -641,7 +641,7 @@ mod tests {
 
     #[test]
     fn both_streams_land_in_the_same_file_so_neither_can_block() {
-        let dir = std::env::temp_dir().join(format!("rendog-launch-log-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("erkuia-launch-log-{}", std::process::id()));
         let path = dir.join("logs").join("minecraft.log");
 
         let first = output_file(&path).unwrap();

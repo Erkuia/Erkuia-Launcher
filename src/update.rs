@@ -139,7 +139,7 @@ mod tests {
                     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
                 },
                 "minecraft": { "version": "1.20.4", "fabricLoader": "0.19.3" },
-                "server": { "address": "rendog.kr" }
+                "server": { "address": "erkuia.kr" }
             }"#,
         )
         .unwrap();

@@ -7,7 +7,7 @@ use crate::config::{Config, MAX_FPS, MIN_FPS};
 
 pub const SCHEMA_VERSION: u32 = 1;
 pub const DIR_NAME: &str = "config";
-pub const FILE_NAME: &str = "rendoglauncher.json";
+pub const FILE_NAME: &str = "erkuialauncher.json";
 
 /// The contract between the launcher and the mod it carries. The launcher owns
 /// every value here, so the file is rewritten on each launch rather than merged
@@ -76,7 +76,7 @@ mod tests {
 
     fn temp_dir(tag: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
-            "rendog-modconfig-{tag}-{}-{}",
+            "erkuia-modconfig-{tag}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -89,16 +89,16 @@ mod tests {
     fn the_file_lands_where_fabric_mods_look() {
         assert_eq!(
             path_in(Path::new("/mc")),
-            Path::new("/mc").join("config").join("rendoglauncher.json")
+            Path::new("/mc").join("config").join("erkuialauncher.json")
         );
     }
 
     #[test]
     fn the_settings_are_carried_over() {
-        let config = ModConfig::from_settings(&settings(120, false), "rendog.kr", "0.1.0");
+        let config = ModConfig::from_settings(&settings(120, false), "erkuia.kr", "0.1.0");
 
         assert_eq!(config.schema_version, SCHEMA_VERSION);
-        assert_eq!(config.server_address, "rendog.kr");
+        assert_eq!(config.server_address, "erkuia.kr");
         assert_eq!(config.target_fps, 120);
         assert!(!config.adaptive_rendering);
         assert_eq!(config.launcher_version, "0.1.0");
@@ -107,25 +107,25 @@ mod tests {
     #[test]
     fn an_out_of_range_fps_is_clamped_before_the_mod_sees_it() {
         assert_eq!(
-            ModConfig::from_settings(&settings(5000, true), "rendog.kr", "0.1.0").target_fps,
+            ModConfig::from_settings(&settings(5000, true), "erkuia.kr", "0.1.0").target_fps,
             MAX_FPS
         );
         assert_eq!(
-            ModConfig::from_settings(&settings(1, true), "rendog.kr", "0.1.0").target_fps,
+            ModConfig::from_settings(&settings(1, true), "erkuia.kr", "0.1.0").target_fps,
             MIN_FPS
         );
     }
 
     #[test]
     fn the_address_is_trimmed() {
-        let config = ModConfig::from_settings(&settings(60, true), "  rendog.kr\n", "0.1.0");
+        let config = ModConfig::from_settings(&settings(60, true), "  erkuia.kr\n", "0.1.0");
 
-        assert_eq!(config.server_address, "rendog.kr");
+        assert_eq!(config.server_address, "erkuia.kr");
     }
 
     #[test]
     fn the_json_uses_the_documented_key_names() {
-        let json = ModConfig::from_settings(&settings(90, true), "rendog.kr", "0.1.0")
+        let json = ModConfig::from_settings(&settings(90, true), "erkuia.kr", "0.1.0")
             .to_json()
             .unwrap();
 
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn it_survives_a_round_trip() {
-        let config = ModConfig::from_settings(&settings(90, true), "rendog.kr", "0.1.0");
+        let config = ModConfig::from_settings(&settings(90, true), "erkuia.kr", "0.1.0");
         let parsed: ModConfig = serde_json::from_str(&config.to_json().unwrap()).unwrap();
 
         assert_eq!(parsed, config);
@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn writing_creates_the_config_folder() {
         let root = temp_dir("write");
-        let config = ModConfig::from_settings(&settings(60, true), "rendog.kr", "0.1.0");
+        let config = ModConfig::from_settings(&settings(60, true), "erkuia.kr", "0.1.0");
 
         write(&root, &config).unwrap();
 
@@ -165,8 +165,8 @@ mod tests {
     fn a_second_write_replaces_the_first() {
         let root = temp_dir("replace");
 
-        write(&root, &ModConfig::from_settings(&settings(60, true), "rendog.kr", "0.1.0")).unwrap();
-        let second = ModConfig::from_settings(&settings(120, false), "rendog.kr", "0.1.0");
+        write(&root, &ModConfig::from_settings(&settings(60, true), "erkuia.kr", "0.1.0")).unwrap();
+        let second = ModConfig::from_settings(&settings(120, false), "erkuia.kr", "0.1.0");
         write(&root, &second).unwrap();
 
         let text = std::fs::read_to_string(path_in(&root)).unwrap();

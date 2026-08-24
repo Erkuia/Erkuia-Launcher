@@ -93,7 +93,7 @@ mod tests {
 
     fn temp(tag: &str, contents: &[u8]) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "rendog-hash-{tag}-{}-{}",
+            "erkuia-hash-{tag}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

@@ -255,7 +255,7 @@ mod tests {
 
     #[test]
     fn a_truncated_cache_entry_is_ignored() {
-        let dir = std::env::temp_dir().join(format!("rendog-avatar-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("erkuia-avatar-{}", std::process::id()));
         std::fs::create_dir_all(dir.join("skins")).unwrap();
         std::fs::write(cache_path(&dir, "short"), [1, 2, 3]).unwrap();
 
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn a_full_cache_entry_round_trips() {
-        let dir = std::env::temp_dir().join(format!("rendog-avatar-ok-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("erkuia-avatar-ok-{}", std::process::id()));
         let head = vec![7_u8; HEAD_BYTES];
 
         store(&dir, "abc", &head).unwrap();

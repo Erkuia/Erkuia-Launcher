@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "launcher": {
     "version": "0.1.0",
-    "url": "https://github.com/foliq/Rendog-Launcher/releases/latest/download/RendogLauncher.exe",
+    "url": "https://github.com/Erkuia/Erkuia-Launcher/releases/latest/download/Erkuia-Launcher.exe",
     "size": 0,
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   },
@@ -11,7 +11,7 @@
     "fabricLoader": "0.19.3"
   },
   "server": {
-    "address": "rendog.kr"
+    "address": "erkuia.kr"
   },
   "mods": [
     {

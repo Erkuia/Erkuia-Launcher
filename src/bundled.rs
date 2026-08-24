@@ -2,9 +2,9 @@ use std::path::Path;
 
 use anyhow::Context;
 
-pub const FILE_NAME: &str = "RendogLauncherMod.jar";
+pub const FILE_NAME: &str = "ErkuiaLauncherMod.jar";
 
-pub const BYTES: &[u8] = include_bytes!(env!("RENDOG_MOD_JAR"));
+pub const BYTES: &[u8] = include_bytes!(env!("ERKUIA_MOD_JAR"));
 
 pub fn is_bundled(file_name: &str) -> bool {
     file_name.eq_ignore_ascii_case(FILE_NAME)
@@ -48,7 +48,7 @@ mod tests {
 
     fn fixture(tag: &str) -> std::path::PathBuf {
         let root = std::env::temp_dir().join(format!(
-            "rendog-bundled-{tag}-{}-{}",
+            "erkuia-bundled-{tag}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn the_name_check_ignores_case() {
         assert!(is_bundled(FILE_NAME));
-        assert!(is_bundled("rendoglaunchermod.jar"));
+        assert!(is_bundled("erkuialaunchermod.jar"));
         assert!(!is_bundled("RendogClient-Delta.jar"));
     }
 }

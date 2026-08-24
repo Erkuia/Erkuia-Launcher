@@ -1,11 +1,11 @@
 [package]
-name = "rendog-launcher"
+name = "erkuia-launcher"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
 
 [[bin]]
-name = "RendogLauncher"
+name = "Erkuia-Launcher"
 path = "src/main.rs"
 
 [dependencies]

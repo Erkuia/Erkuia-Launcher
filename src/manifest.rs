@@ -4,7 +4,7 @@ use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_URL: &str =
-    "https://github.com/foliq/Rendog-Launcher/releases/latest/download/launcher-manifest.json";
+    "https://github.com/Erkuia/Erkuia-Launcher/releases/latest/download/launcher-manifest.json";
 
 pub const SUPPORTED_SCHEMA: u32 = 1;
 const CACHE_FILE: &str = "launcher-manifest.json";
@@ -225,12 +225,12 @@ mod tests {
         "schemaVersion": 1,
         "launcher": {
             "version": "0.1.0",
-            "url": "https://example.invalid/RendogLauncher.exe",
+            "url": "https://example.invalid/Erkuia-Launcher.exe",
             "size": 4194304,
             "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
         },
         "minecraft": { "version": "1.20.4", "fabricLoader": "0.15.11" },
-        "server": { "address": "rendog.kr" },
+        "server": { "address": "erkuia.kr" },
         "mods": [
             {
                 "id": "rendog-client",
@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(manifest.launcher.version, "0.1.0");
         assert_eq!(manifest.minecraft.version, "1.20.4");
         assert_eq!(manifest.minecraft.fabric_loader, "0.15.11");
-        assert_eq!(manifest.server.address, "rendog.kr");
+        assert_eq!(manifest.server.address, "erkuia.kr");
         assert_eq!(manifest.mods.len(), 1);
     }
 
@@ -360,7 +360,7 @@ mod tests {
                 "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
             },
             "minecraft": { "version": "1.20.4", "fabricLoader": "0.15.11" },
-            "server": { "address": "rendog.kr" }
+            "server": { "address": "erkuia.kr" }
         }"#;
 
         let manifest = Manifest::parse(text).unwrap();
@@ -380,7 +380,7 @@ mod tests {
     #[test]
     fn the_cache_survives_a_round_trip() {
         let dir = std::env::temp_dir().join(format!(
-            "rendog-manifest-{}-{}",
+            "erkuia-manifest-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -400,7 +400,7 @@ mod tests {
         let manifest = builtin();
 
         assert_eq!(manifest.minecraft.version, "1.20.4");
-        assert_eq!(manifest.server.address, "rendog.kr");
+        assert_eq!(manifest.server.address, "erkuia.kr");
         assert_eq!(manifest.required_mods().len(), 2);
     }
 
@@ -446,14 +446,14 @@ mod tests {
 
     #[test]
     fn the_bundled_manifest_is_used_when_no_cache_exists() {
-        let dir = std::env::temp_dir().join(format!("rendog-manifest-nocache-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("erkuia-manifest-nocache-{}", std::process::id()));
 
         assert_eq!(load_local(&dir), builtin());
     }
 
     #[test]
     fn a_corrupt_cache_is_ignored() {
-        let dir = std::env::temp_dir().join(format!("rendog-manifest-bad-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("erkuia-manifest-bad-{}", std::process::id()));
         store(&dir, "{ not json").unwrap();
 
         assert_eq!(load_cached(&dir), None);

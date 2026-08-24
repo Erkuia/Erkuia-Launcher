@@ -156,7 +156,7 @@ mod tests {
     impl TempDir {
         fn new(tag: &str) -> Self {
             let path = std::env::temp_dir().join(format!(
-                "rendog-config-{tag}-{}-{}",
+                "erkuia-config-{tag}-{}-{}",
                 std::process::id(),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -198,7 +198,7 @@ mod tests {
         let config = Config {
             target_fps: 90,
             adaptive_rendering: false,
-            accounts: vec![account("a", "Rendog_Player"), account("b", "Rendog_Player2")],
+            accounts: vec![account("a", "Erkuia_Player"), account("b", "Erkuia_Player2")],
             selected_account: Some("b".to_string()),
         };
 
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn initial_comes_from_the_first_character() {
-        assert_eq!(account("a", "rendog").initial(), "R");
+        assert_eq!(account("a", "erkuia").initial(), "E");
         assert_eq!(account("a", "").initial(), "?");
     }
 

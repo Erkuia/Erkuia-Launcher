@@ -455,7 +455,7 @@ fn start_up(app: &LauncherWindow, state: &AppState) {
     }
 
     log::info!(
-        "Rendog Launcher v{} 시작 · data={}",
+        "Erkuia Launcher v{} 시작 · data={}",
         env!("CARGO_PKG_VERSION"),
         resolved.data_dir().display()
     );

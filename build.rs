@@ -32,12 +32,12 @@ fn embed_mod_jar() {
     println!("cargo:rerun-if-changed={}", jar.display());
 
     let destination = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR is set"))
-        .join("rendoglauncher.jar");
+        .join("erkuialauncher.jar");
 
     std::fs::copy(&jar, &destination)
         .unwrap_or_else(|error| panic!("{} 을(를) 복사하지 못했습니다: {error}", jar.display()));
 
-    println!("cargo:rustc-env=RENDOG_MOD_JAR={}", destination.display());
+    println!("cargo:rustc-env=ERKUIA_MOD_JAR={}", destination.display());
 }
 
 fn main() {
@@ -52,10 +52,10 @@ fn main() {
         let mut resource = winresource::WindowsResource::new();
         resource
             .set_icon("assets/erkuia-launcher.ico")
-            .set("ProductName", "Rendog Launcher")
-            .set("FileDescription", "Rendog Launcher")
+            .set("ProductName", "Erkuia Launcher")
+            .set("FileDescription", "Erkuia Launcher")
             .set("CompanyName", "폴리큐")
-            .set("OriginalFilename", "RendogLauncher.exe");
+            .set("OriginalFilename", "Erkuia-Launcher.exe");
         resource
             .compile()
             .expect("failed to compile Windows resources");

@@ -15,10 +15,10 @@ use crate::{
 pub const APPLY_FLAG: &str = "--apply-update";
 pub const BACKUP_SUFFIX: &str = ".old";
 
-const PROBE_NAME: &str = ".rendog-write-probe";
+const PROBE_NAME: &str = ".erkuia-write-probe";
 
 pub fn staged_name(version: &str) -> String {
-    format!("RendogLauncher-{version}.exe")
+    format!("Erkuia-Launcher-{version}.exe")
 }
 
 pub fn staged_path(cache_dir: &Path, version: &str) -> PathBuf {
@@ -44,7 +44,7 @@ fn target(release: &LauncherRelease) -> DownloadTarget {
         relative_path: staged_name(&release.version),
         checksum: Some(Checksum::Sha256(release.sha256.clone())),
         size: release.size,
-        name: Some(format!("RendogLauncher v{}", release.version)),
+        name: Some(format!("Erkuia Launcher v{}", release.version)),
     }
 }
 
@@ -182,7 +182,7 @@ mod tests {
 
     fn temp_dir(tag: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "rendog-selfupdate-{tag}-{}-{}",
+            "erkuia-selfupdate-{tag}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -197,7 +197,7 @@ mod tests {
     fn release(version: &str) -> LauncherRelease {
         LauncherRelease {
             version: version.to_string(),
-            url: "https://example.invalid/RendogLauncher.exe".to_string(),
+            url: "https://example.invalid/Erkuia-Launcher.exe".to_string(),
             size: 4,
             sha256: "0".repeat(64),
         }
@@ -205,31 +205,31 @@ mod tests {
 
     #[test]
     fn the_staged_name_carries_the_version_so_releases_do_not_collide() {
-        assert_eq!(staged_name("0.2.0"), "RendogLauncher-0.2.0.exe");
+        assert_eq!(staged_name("0.2.0"), "Erkuia-Launcher-0.2.0.exe");
         assert_ne!(staged_name("0.2.0"), staged_name("0.3.0"));
     }
 
     #[test]
     fn the_backup_keeps_the_original_name_intact() {
-        let backup = backup_path(Path::new(r"C:\Program Files\Rendog\RendogLauncher.exe"));
+        let backup = backup_path(Path::new(r"C:\Program Files\Erkuia\Erkuia-Launcher.exe"));
 
-        assert!(backup.ends_with("RendogLauncher.exe.old"));
+        assert!(backup.ends_with("Erkuia-Launcher.exe.old"));
         assert!(is_backup(&backup));
-        assert!(!is_backup(Path::new("RendogLauncher.exe")));
+        assert!(!is_backup(Path::new("Erkuia-Launcher.exe")));
     }
 
     #[test]
     fn the_download_is_pinned_to_the_release_checksum() {
         let target = target(&release("0.2.0"));
 
-        assert_eq!(target.relative_path, "RendogLauncher-0.2.0.exe");
+        assert_eq!(target.relative_path, "Erkuia-Launcher-0.2.0.exe");
         assert_eq!(target.checksum, Some(Checksum::Sha256("0".repeat(64))));
     }
 
     #[test]
     fn installing_moves_the_old_file_aside_and_puts_the_new_one_in_place() {
         let dir = temp_dir("install");
-        let exe = dir.join("RendogLauncher.exe");
+        let exe = dir.join("Erkuia-Launcher.exe");
         let staged = dir.join("staged.exe");
 
         std::fs::write(&exe, b"old").unwrap();
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn a_second_update_replaces_the_previous_backup() {
         let dir = temp_dir("twice");
-        let exe = dir.join("RendogLauncher.exe");
+        let exe = dir.join("Erkuia-Launcher.exe");
         let staged = dir.join("staged.exe");
 
         std::fs::write(&exe, b"v1").unwrap();
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn a_missing_download_leaves_the_installed_launcher_alone() {
         let dir = temp_dir("missing");
-        let exe = dir.join("RendogLauncher.exe");
+        let exe = dir.join("Erkuia-Launcher.exe");
         std::fs::write(&exe, b"old").unwrap();
 
         assert!(install(&dir.join("ghost.exe"), &exe).is_err());
@@ -278,15 +278,15 @@ mod tests {
     #[test]
     fn cleanup_removes_backups_and_nothing_else() {
         let dir = temp_dir("clean");
-        std::fs::write(dir.join("RendogLauncher.exe"), b"live").unwrap();
-        std::fs::write(dir.join("RendogLauncher.exe.old"), b"stale").unwrap();
+        std::fs::write(dir.join("Erkuia-Launcher.exe"), b"live").unwrap();
+        std::fs::write(dir.join("Erkuia-Launcher.exe.old"), b"stale").unwrap();
         std::fs::write(dir.join("notes.txt"), b"keep").unwrap();
 
         clean_backups(&dir);
 
-        assert!(dir.join("RendogLauncher.exe").is_file());
+        assert!(dir.join("Erkuia-Launcher.exe").is_file());
         assert!(dir.join("notes.txt").is_file());
-        assert!(!dir.join("RendogLauncher.exe.old").exists());
+        assert!(!dir.join("Erkuia-Launcher.exe.old").exists());
 
         std::fs::remove_dir_all(&dir).ok();
     }
