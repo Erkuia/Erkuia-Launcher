@@ -233,13 +233,13 @@ mod tests {
         "server": { "address": "erkuia.kr" },
         "mods": [
             {
-                "id": "rendog-client",
-                "name": "RendogClient",
-                "description": "서버 자동 접속 · 필수 모드",
+                "id": "fabric-api",
+                "name": "Fabric API",
+                "description": "Erkuia Launcher Mod 가 요구하는 기반 모드",
                 "required": true,
-                "url": "https://example.invalid/RendogClient-Delta.jar",
-                "fileName": "RendogClient-Delta.jar",
-                "size": 8709016,
+                "url": "https://example.invalid/fabric-api.jar",
+                "fileName": "fabric-api-0.97.3+1.20.4.jar",
+                "size": 2187523,
                 "sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
             }
         ],
@@ -257,12 +257,12 @@ mod tests {
         assert_eq!(manifest.mods.len(), 1);
     }
 
-    fn client_mod(manifest: &Manifest) -> &ModArtifact {
+    fn required_mod(manifest: &Manifest) -> &ModArtifact {
         manifest
             .required_mods()
             .into_iter()
-            .find(|artifact| artifact.id == "rendog-client")
-            .expect("the sample pins the client mod")
+            .find(|artifact| artifact.id == "fabric-api")
+            .expect("the sample pins fabric-api")
     }
 
     #[test]
@@ -270,16 +270,9 @@ mod tests {
         let manifest = Manifest::parse(SAMPLE).unwrap();
 
         assert_eq!(manifest.required_mods().len(), 1);
-        assert_eq!(client_mod(&manifest).file_name, "RendogClient-Delta.jar");
-    }
-
-    #[test]
-    fn the_client_mod_hash_matches_the_installer_manifest() {
-        let manifest = Manifest::parse(SAMPLE).unwrap();
-
         assert_eq!(
-            client_mod(&manifest).sha256,
-            "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
+            required_mod(&manifest).file_name,
+            "fabric-api-0.97.3+1.20.4.jar"
         );
     }
 
@@ -335,7 +328,7 @@ mod tests {
 
     #[test]
     fn a_zero_sized_mod_is_refused() {
-        let text = SAMPLE.replace("\"size\": 8709016", "\"size\": 0");
+        let text = SAMPLE.replace("\"size\": 2187523", "\"size\": 0");
 
         assert!(Manifest::parse(&text).is_err());
     }
@@ -401,7 +394,7 @@ mod tests {
 
         assert_eq!(manifest.minecraft.version, "1.20.4");
         assert_eq!(manifest.server.address, "erkuia.kr");
-        assert_eq!(manifest.required_mods().len(), 2);
+        assert_eq!(manifest.required_mods().len(), 1);
     }
 
     /// The bundled copy can never carry its own size or hash — it lives inside
@@ -418,7 +411,7 @@ mod tests {
     }
 
     #[test]
-    fn the_bundled_manifest_pins_fabric_api_and_the_client() {
+    fn the_bundled_manifest_pins_fabric_api() {
         let manifest = builtin();
         let ids: Vec<&str> = manifest
             .required_mods()
@@ -426,22 +419,7 @@ mod tests {
             .map(|artifact| artifact.id.as_str())
             .collect();
 
-        assert!(ids.contains(&"fabric-api"));
-        assert!(ids.contains(&"rendog-client"));
-    }
-
-    #[test]
-    fn the_bundled_loader_clears_the_client_requirement() {
-        let pinned = builtin().minecraft.fabric_loader;
-        let parts: Vec<u32> = pinned
-            .split('.')
-            .map(|part| part.parse().expect("loader version is numeric"))
-            .collect();
-
-        assert!(
-            (parts[0], parts[1], parts[2]) >= (0, 16, 9),
-            "RendogClient 는 Fabric Loader 0.16.9 이상을 요구해요 (현재 {pinned})"
-        );
+        assert_eq!(ids, vec!["fabric-api"]);
     }
 
     #[test]

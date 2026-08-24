@@ -78,7 +78,7 @@ mod tests {
         let mut text = String::new();
         std::io::Read::read_to_string(&mut entry, &mut text).unwrap();
 
-        assert!(text.contains("\"rendoglauncher\""), "{text}");
+        assert!(text.contains("\"erkuialauncher\""), "{text}");
     }
 
     #[test]
@@ -135,6 +135,6 @@ mod tests {
     fn the_name_check_ignores_case() {
         assert!(is_bundled(FILE_NAME));
         assert!(is_bundled("erkuialaunchermod.jar"));
-        assert!(!is_bundled("RendogClient-Delta.jar"));
+        assert!(!is_bundled("fabric-api-0.97.3+1.20.4.jar"));
     }
 }

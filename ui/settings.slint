@@ -144,12 +144,6 @@ export component SettingsPanel inherits VerticalLayout {
                     spacing: 14px;
 
                     ModRow {
-                        name: "RendogClient";
-                        description: "서버 자동 접속 · 필수 모드";
-                        required: true;
-                    }
-
-                    ModRow {
                         name: "적응형 렌더링";
                         description: "FPS 목표에 맞춰 셰이더 품질을 자동 조정";
                         enabled <=> root.adaptive-rendering;
