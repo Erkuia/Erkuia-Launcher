@@ -1,6 +1,6 @@
-# Rendog Launcher 구현 작업 분해
+# Erkuia Launcher 구현 작업 분해
 
-Rendog Launcher(Rust + Slint)를 `RendogLauncher.exe`로 완성하기 위한 작업 분해 문서입니다.
+Erkuia Launcher(Rust + Slint)를 `Erkuia-Launcher.exe`로 완성하기 위한 작업 분해 문서입니다.
 `workflow.md`의 원칙에 따라 각 작업(`L#-#`)은 한 번에 하나씩 완료합니다.
 
 ## 전제 조건
@@ -8,30 +8,30 @@ Rendog Launcher(Rust + Slint)를 `RendogLauncher.exe`로 완성하기 위한 작
 | 항목 | 값 |
 | --- | --- |
 | 구현 언어 | Rust (UI: Slint 1.8) |
-| 산출물 | `RendogLauncher.exe` |
+| 산출물 | `Erkuia-Launcher.exe` |
 | 창 크기 | 1000 × 640 (frameless, 리사이즈 없음) |
-| Minecraft 버전 | `1.20.4` (고정) |
-| 모드 로더 | Fabric (RendogClient 요구사항) |
-| 서버 | `rendog.kr` |
+| Minecraft 버전 | `1.21.4` (고정) |
+| 모드 로더 | Fabric (런처 소유 모드 요구사항) |
+| 서버 | `erkuia.kr` |
 | Java | 21 |
 | 로그인 | Microsoft Title Auth (Device Code) — Phase 4 참고 |
-| 데이터 경로 | `%APPDATA%\RendogLauncher` |
-| 설치 경로 | `%ProgramFiles%\Rendog Launcher` (읽기 전용 취급) |
-| 디자인 | Figma `Rendog-Launcher` / `launcher` 페이지 (`node-id=25-2`) |
+| 데이터 경로 | `%APPDATA%\ErkuiaLauncher` |
+| 설치 경로 | `%ProgramFiles%\Erkuia Launcher` (읽기 전용 취급) |
+| 디자인 | Figma `Erkuia-Launcher` / `launcher` 페이지 (`node-id=25-2`) |
 
 ## 확정된 결정 사항
 
 - [x] **Azure AD Client ID 불필요** — Title Auth 방식 채택 (Phase 4)
-- [x] **데이터 디렉터리** — `%APPDATA%\RendogLauncher`, 인스톨러 반영 완료
-- [x] **런처 매니페스트 호스팅** — GitHub (`foliq/Rendog-Launcher` 릴리즈 자산)
+- [x] **데이터 디렉터리** — `%APPDATA%\ErkuiaLauncher`, 인스톨러 반영 완료
+- [x] **런처 매니페스트 호스팅** — GitHub (`Erkuia/Erkuia-Launcher` 릴리즈 자산)
 - [x] **Java 21 런타임** — 시스템에 없으면 번들 자동 다운로드 (Adoptium)
 
 ### 쓰기 권한 (해결됨)
 
 | 루트 | 경로 | 내용 | 관리자 권한 |
 | --- | --- | --- | --- |
-| install | `%ProgramFiles%\Rendog Launcher` | `RendogLauncher.exe`, 언인스톨러 | 필요 |
-| data | `%APPDATA%\RendogLauncher` | `minecraft\` (게임 파일, 모드, 설정, 로그) | 불필요 |
+| install | `%ProgramFiles%\Erkuia Launcher` | `Erkuia-Launcher.exe`, 언인스톨러 | 필요 |
+| data | `%APPDATA%\ErkuiaLauncher` | `minecraft\` (게임 파일, 모드, 설정, 로그) | 불필요 |
 
 런처는 설치 디렉터리에 쓰지 않습니다 (L9 자체 업데이트만 예외).
 
@@ -43,10 +43,10 @@ Figma에는 **전체 화면 전환이 없습니다.** 단일 메인 화면 위�
 
 ```text
 창 (1000×640, frameless)
-├── 타이틀바 44px          "Rendog Launcher" + [–] [×]
+├── 타이틀바 44px          "Erkuia Launcher" + [–] [×]
 ├── 상단 바                프로필 칩(좌) · [Settings](우)
 │   └── 프로필 드롭다운     240px 팝오버 (3가지 상태)
-├── 히어로 영역            로고 132 · RENDOG LAUNCHER · rendog.kr · Minecraft 1.20.4
+├── 히어로 영역            로고 132 · ERKUIA LAUNCHER · erkuia.kr · Minecraft 1.21.4
 │                          [시작] 140×49 · 상태 힌트 문구
 ├── 푸터                   v1.0.0
 └── 설정 모달              460×560 오버레이
@@ -65,7 +65,7 @@ Figma에는 **전체 화면 전환이 없습니다.** 단일 메인 화면 위�
 | 섹션 | 항목 |
 | --- | --- |
 | 렌더링 | 목표 FPS 슬라이더 (30–150, 현재값 툴팁) + 설명문 |
-| 모드 | `RendogClient` (필수 뱃지, 토글 없음) |
+| 모드 | 런처 소유 필수 모드 (필수 뱃지, 토글 없음) |
 | | `적응형 렌더링` (토글) |
 | | 로컬 모드 목록 (파일명 + `삭제` + 토글, 설명 없으면 `(None)`) |
 | | `+ 로컬에서 모드 추가` (점선 버튼) |
@@ -128,7 +128,7 @@ verificationUri + "?otc=" + userCode
 
 | ID | 작업 | 내용 |
 | --- | --- | --- |
-| L3-1 | 디렉터리 부트스트랩 | `%APPDATA%\RendogLauncher` 하위 `minecraft/`, `runtime/`, `cache/`, `logs/` |
+| L3-1 | 디렉터리 부트스트랩 | `%APPDATA%\ErkuiaLauncher` 하위 `minecraft/`, `runtime/`, `cache/`, `logs/` |
 | L3-2 | 설정 저장/로드 | `config.json` — 목표 FPS, 적응형 렌더링, 모드 상태, 선택 계정. 원자적 쓰기 |
 | L3-3 | 로깅 | 파일 롤링 로그 + 오류 표시용 컨텍스트 |
 | L3-4 | 백그라운드 워커 ↔ UI 브리지 | 인스톨러 `progress.rs` 이벤트 모델 이식, `slint::invoke_from_event_loop` |
@@ -200,7 +200,7 @@ windowsTs = (unix초 + 11644473600) × 10^7
 | ID | 작업 | 내용 |
 | --- | --- | --- |
 | L5-1 | 런처 매니페스트 스키마 | `launcher-manifest.json` — 런처 버전, 필수 모드, 추가 파일, size + SHA-256. **GitHub 릴리즈 자산으로 호스팅** |
-| L5-2 | Minecraft 1.20.4 설치 | version.json, 클라이언트 jar, 라이브러리, natives |
+| L5-2 | Minecraft 1.21.4 설치 | version.json, 클라이언트 jar, 라이브러리, natives |
 | L5-3 | 에셋 인덱스 | asset index 파싱 + `objects/` 다운로드 |
 | L5-4 | Fabric 로더 설치 | Fabric Meta API → 로더 버전 고정, 라이브러리 병합 |
 | L5-5 | 병렬 다운로더 | 동시성 제한, 재시도, 진행률 이벤트 (인스톨러 `download.rs` 재사용) |
@@ -210,8 +210,8 @@ windowsTs = (unix초 + 11644473600) × 10^7
 
 | ID | 작업 | 내용 |
 | --- | --- | --- |
-| L6-1 | 모드 모델 | 필수(`RendogClient`) / 내장 기능(`적응형 렌더링`) / 로컬 추가 모드 3분류 |
-| L6-2 | RendogClient 동기화 | 인스톨러가 배치한 jar의 SHA-256 확인, 매니페스트와 다르면 갱신 |
+| L6-1 | 모드 모델 | 필수 런처 소유 모드 / 내장 기능(`적응형 렌더링`) / 로컬 추가 모드 3분류 |
+| L6-2 | 런처 소유 모드 동기화 | 런처에 내장된 jar를 `mods/`에 기록하고, 매니페스트와 다르면 갱신 |
 | L6-3 | ON/OFF 적용 | `mods/` ↔ `mods-disabled/` 이동, 필수 모드는 비활성화 차단 |
 | L6-4 | 로컬 모드 추가 | 파일 선택 → `mods/`로 복사, `fabric.mod.json`에서 설명 추출 (없으면 `(None)`) |
 | L6-5 | 로컬 모드 삭제 | 파일 제거 + 목록/설정 갱신 |
@@ -221,20 +221,20 @@ windowsTs = (unix초 + 11644473600) × 10^7
 
 | ID | 작업 | 내용 |
 | --- | --- | --- |
-| L7-1 | Java 탐지 | `%APPDATA%\RendogLauncher\runtime` → 시스템 `JAVA_HOME`/PATH 순으로 Java 21 탐색 |
+| L7-1 | Java 탐지 | `%APPDATA%\ErkuiaLauncher\runtime` → 시스템 `JAVA_HOME`/PATH 순으로 Java 21 탐색 |
 | L7-2 | 런타임 자동 확보 | **Java 21이 없으면 Adoptium(Temurin) JRE 21 자동 다운로드 → `runtime/`에 전개 → SHA-256 검증.** 진행률은 시작 흐름에 표시 |
 | L7-3 | JVM 인자 빌더 | 힙 자동 산정(시스템 RAM 기반), GC 옵션, `-Djava.library.path`, classpath |
 | L7-4 | Minecraft 인자 빌더 | `accessToken`, `uuid`, `username`, `assetsDir`, `versionType` |
-| L7-5 | 프로세스 실행 | 작업 디렉터리 `%APPDATA%\RendogLauncher\minecraft`, 로그 수집, 실행 후 런처 종료 |
+| L7-5 | 프로세스 실행 | 작업 디렉터리 `%APPDATA%\ErkuiaLauncher\minecraft`, 로그 수집, 실행 후 런처 종료 |
 | L7-6 | 실행 실패 처리 | 조기 종료 감지, exit code + 로그 요약 표시 |
 
 ## Phase 8 — 서버 자동 접속 & 렌더링 정책 전달
 
 | ID | 작업 | 내용 |
 | --- | --- | --- |
-| L8-1 | 자동 접속 방식 확정 | `--quickPlayMultiplayer rendog.kr` vs RendogClient 설정 파일 |
-| L8-2 | 모드 설정 파일 생성 | 서버 주소 + **목표 FPS** + **적응형 렌더링 ON/OFF**를 RendogClient가 읽을 형식으로 기록 |
-| L8-3 | 설정 ↔ 모드 계약 정의 | 파일 위치·스키마를 RendogClient 쪽과 합의 (모드 수정 필요 여부 확인) |
+| L8-1 | 자동 접속 방식 확정 | `--quickPlayMultiplayer erkuia.kr` vs 런처 소유 모드 설정 파일 |
+| L8-2 | 모드 설정 파일 생성 | 서버 주소 + **목표 FPS** + **적응형 렌더링 ON/OFF**를 런처 소유 모드가 읽을 형식으로 기록 |
+| L8-3 | 설정 ↔ 모드 계약 정의 | 파일 위치·스키마를 런처 소유 모드와 맞춤 |
 
 ## Phase 9 — 런처 자체 업데이트
 
@@ -247,8 +247,8 @@ windowsTs = (unix초 + 11644473600) × 10^7
 
 | ID | 작업 | 내용 |
 | --- | --- | --- |
-| L10-1 | 릴리즈 빌드 | `lto`, `codegen-units=1`, `strip` → `RendogLauncher.exe` |
-| L10-2 | 인스톨러 매니페스트 갱신 | `rendog-launcher` 컴포넌트를 `pending` → `ready` (url/size/sha256, `targetRoot: install`) |
+| L10-1 | 릴리즈 빌드 | `lto`, `codegen-units=1`, `strip` → `Erkuia-Launcher.exe` |
+| L10-2 | 인스톨러 매니페스트 갱신 | `erkuia-launcher` 컴포넌트를 `pending` → `ready` (url/size/sha256, `targetRoot: install`) |
 | L10-3 | 배포 문서화 | 릴리즈 절차, 매니페스트 갱신 체크리스트 |
 
 ## Phase 11 — 검증
@@ -275,7 +275,7 @@ L7 ──> L10 ──> L11
 
 - L2-7(진행·오류 표현)은 미결정 항목 확정 후 착수합니다.
 - L7(실행)은 L4(토큰) · L5(파일) · L6(모드)가 모두 갖춰져야 동작합니다.
-- L8-3은 RendogClient 모드 쪽 확인이 필요해 병렬로 미리 진행할 수 있습니다.
+- L8-3은 런처 소유 모드 쪽 확인이 필요해 병렬로 미리 진행할 수 있습니다.
 - L10-2는 L10-1 완료 후 `installer` 브랜치에서 수행합니다.
 
 ## 권장 착수 순서
@@ -295,7 +295,7 @@ Phase 8은 목표 FPS와 적응형 렌더링 ON/OFF를 **전달**만 한다. 실
 
 | ID | 작업 | 내용 |
 | --- | --- | --- |
-| L12-1 | 설정 로더 | `config/rendoglauncher.json` 읽기. 없거나 깨졌거나 모르는 `schemaVersion`이면 **기본값으로 진행**(실패 금지) |
+| L12-1 | 설정 로더 | `config/erkuialauncher.json` 읽기. 없거나 깨졌거나 모르는 `schemaVersion`이면 **기본값으로 진행**(실패 금지) |
 | L12-2 | 프레임 측정기 | 프레임 시간 링 버퍼 → 평균 FPS + 1% low. 창 전환·로딩으로 생긴 긴 공백 프레임은 표본에서 제외 |
 | L12-3 | 품질 단계 정의 | 0(최고)~N(최저) 단계로 렌더 거리 · 엔티티 거리 · 파티클 · 밉맵 · 구름 · 생물군계 블렌드를 묶음 |
 | L12-4 | 정책 엔진 | 목표 FPS 대비 상·하향 판정. **히스테리시스 + 쿨다운**으로 단계가 왕복 진동하지 않게 |
@@ -316,7 +316,7 @@ Phase 8은 목표 FPS와 적응형 렌더링 ON/OFF를 **전달**만 한다. 실
 
 ### L12-6 ~ L12-8 선행 조건
 
-코어 셰이더 오버라이드는 **1.20.4 클라이언트 jar 안의 바닐라 셰이더 원본**(`assets/minecraft/shaders/core/`)에서 출발해야 한다. 원본을 추측해서 쓰면 렌더링이 조용히 어긋난다. 착수 전에 정할 것:
+코어 셰이더 오버라이드는 **1.21.4 클라이언트 jar 안의 바닐라 셰이더 원본**(`assets/minecraft/shaders/core/`)에서 출발해야 한다. 원본을 추측해서 쓰면 렌더링이 조용히 어긋난다. 착수 전에 정할 것:
 
 1. 바닐라 셰이더 원본을 리소스팩 베이스로 복사해 배포할지 (Mojang 저작물 재배포 판단 필요)
 2. 대상 셰이더 범위 — `rendertype_solid` / `cutout` / `cutout_mipped` / `translucent` 최소 4종
