@@ -1,4 +1,4 @@
-# (Rendog Launcher](docs.md)
+# [Rendog Launcher](docs.md)
 
 Lightweight customized Minecraft launcher for RendogServer.
 
