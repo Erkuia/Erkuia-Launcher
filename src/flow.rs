@@ -234,7 +234,7 @@ mod tests {
 
     fn plan(libraries: Vec<DownloadTarget>, natives: Vec<DownloadTarget>) -> VersionPlan {
         VersionPlan {
-            id: "1.20.4".to_string(),
+            id: "1.21.4".to_string(),
             main_class: "net.minecraft.client.main.Main".to_string(),
             asset_index: AssetIndexRef {
                 id: "12".to_string(),
@@ -247,7 +247,7 @@ mod tests {
             java_major: 21,
             client: DownloadTarget {
                 url: "https://piston.invalid/client.jar".to_string(),
-                relative_path: "versions/1.20.4/1.20.4.jar".to_string(),
+                relative_path: "versions/1.21.4/1.21.4.jar".to_string(),
                 checksum: Some(Checksum::Sha1("b".repeat(40))),
                 size: 24_445_539,
                 name: None,
@@ -284,7 +284,7 @@ mod tests {
         let targets = assemble_targets(&version, &libraries, &index(&["0".repeat(40).as_str()])).unwrap();
         let paths = paths(&targets);
 
-        assert!(paths.contains(&"versions/1.20.4/1.20.4.jar"), "client jar");
+        assert!(paths.contains(&"versions/1.21.4/1.21.4.jar"), "client jar");
         assert!(paths.contains(&"assets/indexes/12.json"), "asset index");
         assert!(paths.iter().any(|path| path.starts_with("libraries/")), "libraries");
         assert!(paths.iter().any(|path| path.starts_with("assets/objects/")), "asset objects");

@@ -204,7 +204,7 @@ pub fn jvm_arguments(inputs: &LaunchInputs<'_>) -> Vec<String> {
     arguments
 }
 
-/// Quick Play is the vanilla way in: 1.20.4 declares the flag behind the
+/// Quick Play is the vanilla way in: 1.21.4 declares the flag behind the
 /// `is_quick_play_multiplayer` feature, so the client dials the server itself
 /// and the launcher needs no agreement with any mod. An empty address simply
 /// leaves the player on the multiplayer screen.
@@ -365,7 +365,7 @@ mod tests {
 
     fn version() -> VersionPlan {
         VersionPlan {
-            id: "1.20.4".to_string(),
+            id: "1.21.4".to_string(),
             main_class: "net.minecraft.client.main.Main".to_string(),
             asset_index: AssetIndexRef {
                 id: "12".to_string(),
@@ -376,7 +376,7 @@ mod tests {
             },
             assets: "12".to_string(),
             java_major: 17,
-            client: target("versions/1.20.4/1.20.4.jar"),
+            client: target("versions/1.21.4/1.21.4.jar"),
             libraries: Vec::new(),
             natives: Vec::new(),
         }
@@ -384,7 +384,7 @@ mod tests {
 
     fn loader() -> LoaderPlan {
         LoaderPlan {
-            loader_version: "0.15.11".to_string(),
+            loader_version: "0.19.3".to_string(),
             main_class: "net.fabricmc.loader.impl.launch.knot.KnotClient".to_string(),
             libraries: Vec::new(),
             jvm_arguments: vec!["-DFabricMcEmu= net.minecraft.client.main.Main ".to_string()],
@@ -435,14 +435,14 @@ mod tests {
     #[test]
     fn the_client_jar_goes_last_on_the_classpath() {
         let libraries = vec![target("libraries/a.jar"), target("libraries/b.jar")];
-        let client = target("versions/1.20.4/1.20.4.jar");
+        let client = target("versions/1.21.4/1.21.4.jar");
 
         let value = classpath(Path::new("/mc"), &libraries, &client);
         let entries: Vec<&str> = value.split(CLASSPATH_SEPARATOR).collect();
 
         assert_eq!(entries.len(), 3);
         assert!(entries[0].ends_with("a.jar"));
-        assert!(entries[2].ends_with("1.20.4.jar"));
+        assert!(entries[2].ends_with("1.21.4.jar"));
     }
 
     #[test]
@@ -655,6 +655,6 @@ mod tests {
 
     #[test]
     fn natives_are_kept_per_version() {
-        assert!(natives_version_dir(Path::new("/mc/natives"), "1.20.4").ends_with("1.20.4"));
+        assert!(natives_version_dir(Path::new("/mc/natives"), "1.21.4").ends_with("1.21.4"));
     }
 }

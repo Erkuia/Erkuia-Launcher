@@ -493,7 +493,7 @@ mod tests {
                     "size": 1,
                     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
                 },
-                "minecraft": { "version": "1.20.4", "fabricLoader": "0.15.11" },
+                "minecraft": { "version": "1.21.4", "fabricLoader": "0.19.3" },
                 "server": { "address": "erkuia.kr" },
                 "mods": [{
                     "id": "fabric-api",
@@ -501,7 +501,7 @@ mod tests {
                     "description": "Erkuia Launcher Mod 가 요구하는 기반 모드",
                     "required": true,
                     "url": "https://example.invalid/fabric-api.jar",
-                    "fileName": "fabric-api-0.97.3+1.20.4.jar",
+                    "fileName": "fabric-api-0.119.4+1.21.4.jar",
                     "size": 2187523,
                     "sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
                 }]
@@ -556,7 +556,7 @@ mod tests {
     #[test]
     fn a_manifest_mod_is_marked_required() {
         let fixture = Fixture::new("required");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
 
         let entries = fixture.scan(Some(&manifest()));
 
@@ -582,7 +582,7 @@ mod tests {
     fn required_mods_are_listed_before_local_ones() {
         let fixture = Fixture::new("order");
         fixture.put("mods", "aaa.jar");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
         fixture.put("mods", "zzz.jar");
 
         let entries = fixture.scan(Some(&manifest()));
@@ -597,7 +597,7 @@ mod tests {
     #[test]
     fn required_mods_cannot_be_removed_or_disabled() {
         let fixture = Fixture::new("locked");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
         fixture.put("mods", "custom.jar");
 
         let entries = fixture.scan(Some(&manifest()));
@@ -629,7 +629,7 @@ mod tests {
     #[test]
     fn only_local_mods_reach_the_settings_list() {
         let fixture = Fixture::new("local");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
         fixture.put("mods", "custom.jar");
 
         let entries = fixture.scan(Some(&manifest()));
@@ -779,7 +779,7 @@ mod tests {
     #[test]
     fn a_required_mod_cannot_be_turned_off() {
         let fixture = Fixture::new("locked-off");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
         let entries = fixture.scan(Some(&manifest()));
 
         let error = set_enabled(&fixture.mods(), &fixture.disabled(), &entries[0], false)
@@ -787,17 +787,17 @@ mod tests {
             .to_string();
 
         assert!(error.contains("필수"));
-        assert!(fixture.mods().join("fabric-api-0.97.3+1.20.4.jar").is_file());
+        assert!(fixture.mods().join("fabric-api-0.119.4+1.21.4.jar").is_file());
     }
 
     #[test]
     fn a_required_mod_cannot_be_removed() {
         let fixture = Fixture::new("locked-rm");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
         let entries = fixture.scan(Some(&manifest()));
 
         assert!(remove(&fixture.mods(), &fixture.disabled(), &entries[0]).is_err());
-        assert!(fixture.mods().join("fabric-api-0.97.3+1.20.4.jar").is_file());
+        assert!(fixture.mods().join("fabric-api-0.119.4+1.21.4.jar").is_file());
     }
 
     #[test]
@@ -884,7 +884,7 @@ mod tests {
         let targets = required_targets(&manifest());
 
         assert_eq!(targets.len(), 1);
-        assert_eq!(targets[0].relative_path, "mods/fabric-api-0.97.3+1.20.4.jar");
+        assert_eq!(targets[0].relative_path, "mods/fabric-api-0.119.4+1.21.4.jar");
         assert_eq!(
             targets[0].checksum,
             Some(crate::hash::Checksum::Sha256(
@@ -897,35 +897,35 @@ mod tests {
     #[test]
     fn a_parked_required_mod_is_moved_back_into_mods() {
         let fixture = Fixture::new("restore");
-        fixture.put("mods-disabled", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods-disabled", "fabric-api-0.119.4+1.21.4.jar");
 
         let sync =
             prepare_required(&fixture.mods(), &fixture.disabled(), &manifest(), &[]).unwrap();
 
-        assert_eq!(sync.restored, vec!["fabric-api-0.97.3+1.20.4.jar"]);
-        assert!(fixture.mods().join("fabric-api-0.97.3+1.20.4.jar").is_file());
-        assert!(!fixture.disabled().join("fabric-api-0.97.3+1.20.4.jar").exists());
+        assert_eq!(sync.restored, vec!["fabric-api-0.119.4+1.21.4.jar"]);
+        assert!(fixture.mods().join("fabric-api-0.119.4+1.21.4.jar").is_file());
+        assert!(!fixture.disabled().join("fabric-api-0.119.4+1.21.4.jar").exists());
     }
 
     #[test]
     fn a_duplicate_parked_copy_is_dropped() {
         let fixture = Fixture::new("dup");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
-        fixture.put("mods-disabled", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
+        fixture.put("mods-disabled", "fabric-api-0.119.4+1.21.4.jar");
 
         let sync =
             prepare_required(&fixture.mods(), &fixture.disabled(), &manifest(), &[]).unwrap();
 
         assert!(sync.restored.is_empty());
-        assert!(fixture.mods().join("fabric-api-0.97.3+1.20.4.jar").is_file());
-        assert!(!fixture.disabled().join("fabric-api-0.97.3+1.20.4.jar").exists());
+        assert!(fixture.mods().join("fabric-api-0.119.4+1.21.4.jar").is_file());
+        assert!(!fixture.disabled().join("fabric-api-0.119.4+1.21.4.jar").exists());
     }
 
     #[test]
     fn a_managed_mod_dropped_from_the_manifest_is_removed() {
         let fixture = Fixture::new("stale");
         fixture.put("mods", "legacy-extra.jar");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
 
         let managed = vec!["legacy-extra.jar".to_string()];
         let sync =
@@ -933,7 +933,7 @@ mod tests {
 
         assert_eq!(sync.removed, vec!["legacy-extra.jar"]);
         assert!(!fixture.mods().join("legacy-extra.jar").exists());
-        assert!(fixture.mods().join("fabric-api-0.97.3+1.20.4.jar").is_file());
+        assert!(fixture.mods().join("fabric-api-0.119.4+1.21.4.jar").is_file());
     }
 
     #[test]
@@ -951,21 +951,21 @@ mod tests {
     #[test]
     fn a_mod_still_required_is_not_treated_as_stale() {
         let fixture = Fixture::new("current");
-        fixture.put("mods", "fabric-api-0.97.3+1.20.4.jar");
+        fixture.put("mods", "fabric-api-0.119.4+1.21.4.jar");
 
-        let managed = vec!["fabric-api-0.97.3+1.20.4.jar".to_string()];
+        let managed = vec!["fabric-api-0.119.4+1.21.4.jar".to_string()];
         let sync =
             prepare_required(&fixture.mods(), &fixture.disabled(), &manifest(), &managed).unwrap();
 
         assert!(sync.removed.is_empty());
-        assert!(fixture.mods().join("fabric-api-0.97.3+1.20.4.jar").is_file());
+        assert!(fixture.mods().join("fabric-api-0.119.4+1.21.4.jar").is_file());
     }
 
     #[test]
     fn the_managed_list_comes_from_the_manifest() {
         assert_eq!(
             required_file_names(&manifest()),
-            vec!["fabric-api-0.97.3+1.20.4.jar"]
+            vec!["fabric-api-0.119.4+1.21.4.jar"]
         );
     }
 

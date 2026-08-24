@@ -229,7 +229,7 @@ mod tests {
             "size": 4194304,
             "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
         },
-        "minecraft": { "version": "1.20.4", "fabricLoader": "0.15.11" },
+        "minecraft": { "version": "1.21.4", "fabricLoader": "0.19.3" },
         "server": { "address": "erkuia.kr" },
         "mods": [
             {
@@ -238,7 +238,7 @@ mod tests {
                 "description": "Erkuia Launcher Mod 가 요구하는 기반 모드",
                 "required": true,
                 "url": "https://example.invalid/fabric-api.jar",
-                "fileName": "fabric-api-0.97.3+1.20.4.jar",
+                "fileName": "fabric-api-0.119.4+1.21.4.jar",
                 "size": 2187523,
                 "sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
             }
@@ -251,8 +251,8 @@ mod tests {
         let manifest = Manifest::parse(SAMPLE).unwrap();
 
         assert_eq!(manifest.launcher.version, "0.1.0");
-        assert_eq!(manifest.minecraft.version, "1.20.4");
-        assert_eq!(manifest.minecraft.fabric_loader, "0.15.11");
+        assert_eq!(manifest.minecraft.version, "1.21.4");
+        assert_eq!(manifest.minecraft.fabric_loader, "0.19.3");
         assert_eq!(manifest.server.address, "erkuia.kr");
         assert_eq!(manifest.mods.len(), 1);
     }
@@ -272,7 +272,7 @@ mod tests {
         assert_eq!(manifest.required_mods().len(), 1);
         assert_eq!(
             required_mod(&manifest).file_name,
-            "fabric-api-0.97.3+1.20.4.jar"
+            "fabric-api-0.119.4+1.21.4.jar"
         );
     }
 
@@ -352,7 +352,7 @@ mod tests {
                 "size": 1,
                 "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
             },
-            "minecraft": { "version": "1.20.4", "fabricLoader": "0.15.11" },
+            "minecraft": { "version": "1.21.4", "fabricLoader": "0.19.3" },
             "server": { "address": "erkuia.kr" }
         }"#;
 
@@ -392,7 +392,7 @@ mod tests {
     fn the_bundled_manifest_is_valid() {
         let manifest = builtin();
 
-        assert_eq!(manifest.minecraft.version, "1.20.4");
+        assert_eq!(manifest.minecraft.version, "1.21.4");
         assert_eq!(manifest.server.address, "erkuia.kr");
         assert_eq!(manifest.required_mods().len(), 1);
     }

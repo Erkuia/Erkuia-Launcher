@@ -189,14 +189,14 @@ mod tests {
     use super::*;
 
     const PROFILE: &str = r#"{
-        "id": "fabric-loader-0.15.11-1.20.4",
-        "inheritsFrom": "1.20.4",
+        "id": "fabric-loader-0.19.3-1.21.4",
+        "inheritsFrom": "1.21.4",
         "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
         "arguments": { "jvm": ["-DFabricMcEmu= net.minecraft.client.main.Main "], "game": [] },
         "libraries": [
             { "name": "net.fabricmc:sponge-mixin:0.13.2+mixin.0.8.5", "url": "https://maven.fabricmc.net/" },
             { "name": "org.ow2.asm:asm:9.6", "url": "https://maven.fabricmc.net" },
-            { "name": "net.fabricmc:fabric-loader:0.15.11" }
+            { "name": "net.fabricmc:fabric-loader:0.19.3" }
         ]
     }"#;
 
@@ -231,19 +231,19 @@ mod tests {
     #[test]
     fn builds_the_meta_urls() {
         assert_eq!(
-            loaders_url("1.20.4"),
-            "https://meta.fabricmc.net/v2/versions/loader/1.20.4"
+            loaders_url("1.21.4"),
+            "https://meta.fabricmc.net/v2/versions/loader/1.21.4"
         );
         assert_eq!(
-            profile_url("1.20.4", "0.15.11"),
-            "https://meta.fabricmc.net/v2/versions/loader/1.20.4/0.15.11/profile/json"
+            profile_url("1.21.4", "0.19.3"),
+            "https://meta.fabricmc.net/v2/versions/loader/1.21.4/0.19.3/profile/json"
         );
     }
 
     #[test]
     fn parses_the_profile() {
         let profile: Profile = serde_json::from_str(PROFILE).unwrap();
-        let plan = profile.plan("0.15.11");
+        let plan = profile.plan("0.19.3");
 
         assert_eq!(
             plan.main_class,
@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn library_urls_are_built_from_the_maven_base() {
         let profile: Profile = serde_json::from_str(PROFILE).unwrap();
-        let plan = profile.plan("0.15.11");
+        let plan = profile.plan("0.19.3");
 
         assert_eq!(
             plan.libraries[0].url,
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn a_maven_base_without_a_trailing_slash_still_works() {
         let profile: Profile = serde_json::from_str(PROFILE).unwrap();
-        let plan = profile.plan("0.15.11");
+        let plan = profile.plan("0.19.3");
 
         assert_eq!(
             plan.libraries[1].url,
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn a_library_without_a_url_falls_back_to_the_fabric_maven() {
         let profile: Profile = serde_json::from_str(PROFILE).unwrap();
-        let plan = profile.plan("0.15.11");
+        let plan = profile.plan("0.19.3");
 
         assert!(plan.libraries[2].url.starts_with(DEFAULT_MAVEN));
     }
@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn fabric_libraries_have_no_hash_to_verify() {
         let profile: Profile = serde_json::from_str(PROFILE).unwrap();
-        let plan = profile.plan("0.15.11");
+        let plan = profile.plan("0.19.3");
 
         assert!(plan.libraries.iter().all(|target| target.checksum.is_none()));
     }
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     fn the_loader_copy_of_a_shared_library_wins() {
         let profile: Profile = serde_json::from_str(PROFILE).unwrap();
-        let loader = profile.plan("0.15.11").libraries;
+        let loader = profile.plan("0.19.3").libraries;
         let vanilla = vec![
             vanilla("org.ow2.asm:asm:9.3", "org/ow2/asm/asm/9.3/asm-9.3.jar"),
             vanilla("com.google.guava:guava:32.1.2", "com/google/guava/guava/32.1.2/guava-32.1.2.jar"),
@@ -318,7 +318,7 @@ mod tests {
     #[test]
     fn merging_keeps_the_loader_entries_first() {
         let profile: Profile = serde_json::from_str(PROFILE).unwrap();
-        let loader = profile.plan("0.15.11").libraries;
+        let loader = profile.plan("0.19.3").libraries;
         let vanilla = vec![vanilla(
             "com.google.guava:guava:32.1.2",
             "com/google/guava/guava/32.1.2/guava-32.1.2.jar",
@@ -335,12 +335,12 @@ mod tests {
         let entries: Vec<LoaderEntry> = serde_json::from_str(
             r#"[
                 { "loader": { "version": "0.16.0-beta.1", "stable": false } },
-                { "loader": { "version": "0.15.11", "stable": true } }
+                { "loader": { "version": "0.19.3", "stable": true } }
             ]"#,
         )
         .unwrap();
 
-        assert_eq!(pick_loader(&entries).unwrap().version, "0.15.11");
+        assert_eq!(pick_loader(&entries).unwrap().version, "0.19.3");
     }
 
     #[test]

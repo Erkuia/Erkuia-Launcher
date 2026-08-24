@@ -135,6 +135,6 @@ mod tests {
     fn the_name_check_ignores_case() {
         assert!(is_bundled(FILE_NAME));
         assert!(is_bundled("erkuialaunchermod.jar"));
-        assert!(!is_bundled("fabric-api-0.97.3+1.20.4.jar"));
+        assert!(!is_bundled("fabric-api-0.119.4+1.21.4.jar"));
     }
 }

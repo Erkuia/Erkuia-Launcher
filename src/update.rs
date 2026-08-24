@@ -138,7 +138,7 @@ mod tests {
                     "size": 1,
                     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
                 },
-                "minecraft": { "version": "1.20.4", "fabricLoader": "0.19.3" },
+                "minecraft": { "version": "1.21.4", "fabricLoader": "0.19.3" },
                 "server": { "address": "erkuia.kr" }
             }"#,
         )

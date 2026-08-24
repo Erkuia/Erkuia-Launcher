@@ -85,13 +85,13 @@ mod tests {
     #[test]
     fn keeps_the_outermost_context() {
         let error = anyhow::anyhow!("connection reset")
-            .context("fabric-api-0.97.3+1.20.4.jar 다운로드에 실패했어요.");
+            .context("fabric-api-0.119.4+1.21.4.jar 다운로드에 실패했어요.");
         let user_error = UserError::from_error(ErrorCode::Download, &error);
 
         assert_eq!(user_error.code, ErrorCode::Download);
         assert_eq!(
             user_error.message,
-            "fabric-api-0.97.3+1.20.4.jar 다운로드에 실패했어요."
+            "fabric-api-0.119.4+1.21.4.jar 다운로드에 실패했어요."
         );
     }
 

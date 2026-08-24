@@ -47,7 +47,7 @@ impl Platform {
         }
     }
 
-    /// 1.20.4 ships every Windows native under the same `os.name` rule, so the
+    /// 1.21.4 ships every Windows native under the same `os.name` rule, so the
     /// rules alone would let x86 and arm64 binaries onto an x64 classpath. The
     /// classifier is what actually names the architecture: 64-bit gets the bare
     /// `natives-<os>` and everything else carries an explicit suffix.
@@ -448,7 +448,7 @@ mod tests {
     fn detail(libraries: &str) -> VersionDetail {
         let json = format!(
             r#"{{
-                "id": "1.20.4",
+                "id": "1.21.4",
                 "mainClass": "net.minecraft.client.main.Main",
                 "assets": "12",
                 "assetIndex": {{
@@ -477,7 +477,7 @@ mod tests {
     fn the_client_jar_lands_in_the_versions_folder() {
         let plan = detail("").plan(WINDOWS).unwrap();
 
-        assert_eq!(plan.client.relative_path, "versions/1.20.4/1.20.4.jar");
+        assert_eq!(plan.client.relative_path, "versions/1.21.4/1.21.4.jar");
         assert_eq!(plan.client.checksum, Some(Checksum::Sha1("bbbb".to_string())));
         assert_eq!(plan.java_major, 17);
     }
@@ -567,7 +567,7 @@ mod tests {
     #[test]
     fn java_defaults_to_twenty_one_when_absent() {
         let json = r#"{
-            "id": "1.20.4",
+            "id": "1.21.4",
             "mainClass": "M",
             "assets": "12",
             "assetIndex": { "id": "12", "url": "u", "sha1": "a", "size": 1 },
@@ -595,7 +595,7 @@ mod tests {
     #[test]
     fn only_the_matching_architecture_native_survives() {
         let json = r#"{
-            "id": "1.20.4",
+            "id": "1.21.4",
             "mainClass": "net.minecraft.client.main.Main",
             "assets": "12",
             "assetIndex": {"id":"12","url":"u","sha1":"s","size":1,"totalSize":2},
@@ -663,12 +663,12 @@ mod tests {
         let index: VersionIndex = serde_json::from_str(
             r#"{"versions":[
                 {"id":"1.20.5","type":"release","url":"u1"},
-                {"id":"1.20.4","type":"release","url":"u2"}
+                {"id":"1.21.4","type":"release","url":"u2"}
             ]}"#,
         )
         .unwrap();
 
-        assert_eq!(index.find("1.20.4").unwrap().url, "u2");
+        assert_eq!(index.find("1.21.4").unwrap().url, "u2");
         assert!(index.find("1.19.0").is_none());
     }
 }
