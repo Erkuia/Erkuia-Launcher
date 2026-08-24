@@ -48,26 +48,26 @@ mod tests {
     #[test]
     fn keeps_plain_paths_untouched() {
         assert_eq!(
-            expand(r"D:\Games\Rendog").unwrap(),
-            PathBuf::from(r"D:\Games\Rendog")
+            expand(r"D:\Games\Erkuia").unwrap(),
+            PathBuf::from(r"D:\Games\Erkuia")
         );
     }
 
     #[test]
     fn rejects_unknown_variables() {
-        assert!(expand(r"%WINDIR%\Rendog").is_err());
+        assert!(expand(r"%WINDIR%\Erkuia").is_err());
     }
 
     #[test]
     fn expands_known_variables() {
         std::env::set_var("APPDATA", r"C:\Users\test\AppData\Roaming");
         assert_eq!(
-            expand(r"%APPDATA%\RendogLauncher").unwrap(),
-            PathBuf::from(r"C:\Users\test\AppData\Roaming\RendogLauncher")
+            expand(r"%APPDATA%\ErkuiaLauncher").unwrap(),
+            PathBuf::from(r"C:\Users\test\AppData\Roaming\ErkuiaLauncher")
         );
         assert_eq!(
-            expand(r"%appdata%\RendogLauncher").unwrap(),
-            PathBuf::from(r"C:\Users\test\AppData\Roaming\RendogLauncher")
+            expand(r"%appdata%\ErkuiaLauncher").unwrap(),
+            PathBuf::from(r"C:\Users\test\AppData\Roaming\ErkuiaLauncher")
         );
     }
 }

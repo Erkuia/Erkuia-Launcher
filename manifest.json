@@ -1,14 +1,14 @@
 {
     "schemaVersion": 1,
     "product": {
-        "id": "rendog-launcher",
-        "name": "Rendog Launcher",
+        "id": "erkuia-launcher",
+        "name": "Erkuia Launcher",
         "minecraftVersion": "1.20.4",
-        "serverAddress": "rendog.kr"
+        "serverAddress": "erkuia.kr"
     },
     "installer": {
-        "id": "rendog-launcher-installer",
-        "name": "Rendog Launcher Installer",
+        "id": "erkuia-launcher-installer",
+        "name": "Erkuia Launcher Installer",
         "mode": "online",
         "requiresAdminOnInstall": true,
         "allowPendingRequiredComponents": true,
@@ -16,8 +16,8 @@
         "defaultCreateDesktopShortcut": true
     },
     "installPlan": {
-        "defaultInstallDir": "%ProgramFiles%\\Rendog Launcher",
-        "dataDir": "%APPDATA%\\RendogLauncher",
+        "defaultInstallDir": "%ProgramFiles%\\Erkuia Launcher",
+        "dataDir": "%APPDATA%\\ErkuiaLauncher",
         "components": [
             {
                 "id": "rendog-client",
@@ -33,15 +33,15 @@
                 "sha256": "72fc258a685734e9cb7914aca0cabf60696facb2253b48dd959eede94b1c111a"
             },
             {
-                "id": "rendog-launcher",
-                "name": "Rendog Launcher",
+                "id": "erkuia-launcher",
+                "name": "Erkuia Launcher",
                 "kind": "launcher",
                 "required": true,
-                "fileName": "RendogLauncher.exe",
+                "fileName": "Erkuia-Launcher.exe",
                 "targetRoot": "install",
-                "targetPath": "RendogLauncher.exe",
+                "targetPath": "Erkuia-Launcher.exe",
                 "status": "ready",
-                "url": "https://github.com/foliq/Rendog-Launcher/releases/latest/download/RendogLauncher.exe",
+                "url": "https://github.com/Erkuia/Erkuia-Launcher/releases/latest/download/Erkuia-Launcher.exe",
                 "size": 18275840,
                 "sha256": "bce23621b031995b7b5c3d4d0d256a907dbf5cde19f4721309f5de19c1f2e9c2"
             }
@@ -49,11 +49,11 @@
     },
     "uninstall": {
         "enabled": true,
-        "displayName": "Rendog Launcher",
+        "displayName": "Erkuia Launcher",
         "removeDesktopShortcut": true,
         "removeStartMenuShortcut": true,
         "preserveUserDataByDefault": true,
-        "userDataBackupName": "Rendog Launcher User Data"
+        "userDataBackupName": "Erkuia Launcher User Data"
     },
     "progressWeights": {
         "prepare": {

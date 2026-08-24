@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn reads_drive_letter_only_from_windows_paths() {
-        assert_eq!(drive_letter(r"c:\Program Files\Rendog"), Some('C'));
+        assert_eq!(drive_letter(r"c:\Program Files\Erkuia"), Some('C'));
         assert_eq!(drive_letter(r"\\server\share"), None);
         assert_eq!(drive_letter(""), None);
     }

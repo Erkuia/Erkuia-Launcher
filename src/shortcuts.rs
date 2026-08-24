@@ -9,8 +9,8 @@ use crate::{
 
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
-const SHORTCUT_FILE_NAME: &str = "Rendog Launcher.lnk";
-const START_MENU_FOLDER_NAME: &str = "Rendog Launcher";
+const SHORTCUT_FILE_NAME: &str = "Erkuia Launcher.lnk";
+const START_MENU_FOLDER_NAME: &str = "Erkuia Launcher";
 const FINALIZE_MESSAGE: &str = "설치 완료 중...";
 
 pub fn create_launcher_shortcuts(
@@ -24,7 +24,7 @@ pub fn create_launcher_shortcuts(
         message: FINALIZE_MESSAGE.to_string(),
     });
 
-    let launcher_path = install_dir.join("RendogLauncher.exe");
+    let launcher_path = install_dir.join("Erkuia-Launcher.exe");
     if !launcher_path.exists() {
         emit(InstallEvent::Progress {
             stage: InstallStage::Shortcuts,
@@ -81,7 +81,7 @@ pub fn apply_desktop_shortcut(install_dir: &Path, enabled: bool) -> anyhow::Resu
         return Ok(());
     }
 
-    let launcher_path = install_dir.join("RendogLauncher.exe");
+    let launcher_path = install_dir.join("Erkuia-Launcher.exe");
     if !launcher_path.exists() {
         return Ok(());
     }

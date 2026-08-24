@@ -151,8 +151,8 @@ mod tests {
 
     fn roots() -> InstallRoots {
         InstallRoots {
-            install_dir: PathBuf::from(r"C:\Program Files\Rendog Launcher"),
-            data_dir: PathBuf::from(r"C:\Users\test\AppData\Roaming\RendogLauncher"),
+            install_dir: PathBuf::from(r"C:\Program Files\Erkuia Launcher"),
+            data_dir: PathBuf::from(r"C:\Users\test\AppData\Roaming\ErkuiaLauncher"),
         }
     }
 
@@ -161,11 +161,11 @@ mod tests {
         let roots = roots();
         assert_eq!(
             roots.root_for(TargetRoot::Install),
-            Path::new(r"C:\Program Files\Rendog Launcher")
+            Path::new(r"C:\Program Files\Erkuia Launcher")
         );
         assert_eq!(
             roots.root_for(TargetRoot::Data),
-            Path::new(r"C:\Users\test\AppData\Roaming\RendogLauncher")
+            Path::new(r"C:\Users\test\AppData\Roaming\ErkuiaLauncher")
         );
     }
 

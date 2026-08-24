@@ -116,7 +116,7 @@ fn validate_required_components(manifest: &Manifest) -> anyhow::Result<()> {
 }
 
 fn installer_cache_dir() -> anyhow::Result<PathBuf> {
-    Ok(std::env::temp_dir().join("rendog-launcher-installer"))
+    Ok(std::env::temp_dir().join("erkuia-launcher-installer"))
 }
 
 pub fn resolve_data_dir(manifest: &Manifest) -> anyhow::Result<PathBuf> {
@@ -129,7 +129,7 @@ pub fn resolve_data_dir(manifest: &Manifest) -> anyhow::Result<PathBuf> {
 /// hand it the administrator token as well. Going through `explorer.exe` makes
 /// the shell start it at the logged-on user's normal integrity level instead.
 pub fn launch_installed_launcher(install_dir: &Path, drop_elevation: bool) -> anyhow::Result<bool> {
-    let launcher_path = install_dir.join("RendogLauncher.exe");
+    let launcher_path = install_dir.join("Erkuia-Launcher.exe");
     if !launcher_path.exists() {
         return Ok(false);
     }

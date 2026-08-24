@@ -12,7 +12,7 @@ use crate::{
 type EventSink<'a> = &'a mut dyn FnMut(InstallEvent);
 
 const UNINSTALL_KEY: &str =
-    r"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\RendogLauncher";
+    r"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ErkuiaLauncher";
 
 /// Shown as the publisher in Windows Settings and in the app list.
 const PUBLISHER: &str = "폴리큐";
@@ -158,7 +158,7 @@ fn copy_uninstaller_to_install_dir(install_dir: &Path) -> anyhow::Result<PathBuf
 
     let current_exe =
         std::env::current_exe().context("failed to resolve current installer executable")?;
-    let installed_uninstaller = install_dir.join("RendogLauncherInstaller.exe");
+    let installed_uninstaller = install_dir.join("Erkuia-Launcher-Installer.exe");
 
     if current_exe != installed_uninstaller {
         std::fs::copy(&current_exe, &installed_uninstaller).with_context(|| {
@@ -195,7 +195,7 @@ fn remove_shortcuts(manifest: &Manifest) -> anyhow::Result<()> {
         script.push_str(
             "$w = New-Object -ComObject WScript.Shell; \
              $desktop = $w.SpecialFolders('Desktop'); \
-             Remove-Item -LiteralPath (Join-Path $desktop 'Rendog Launcher.lnk') -Force -ErrorAction SilentlyContinue; ",
+             Remove-Item -LiteralPath (Join-Path $desktop 'Erkuia Launcher.lnk') -Force -ErrorAction SilentlyContinue; ",
         );
     }
 
@@ -203,7 +203,7 @@ fn remove_shortcuts(manifest: &Manifest) -> anyhow::Result<()> {
         script.push_str(
             "$w = New-Object -ComObject WScript.Shell; \
              $programs = $w.SpecialFolders('Programs'); \
-             Remove-Item -LiteralPath (Join-Path $programs 'Rendog Launcher') -Recurse -Force -ErrorAction SilentlyContinue; ",
+             Remove-Item -LiteralPath (Join-Path $programs 'Erkuia Launcher') -Recurse -Force -ErrorAction SilentlyContinue; ",
         );
     }
 
