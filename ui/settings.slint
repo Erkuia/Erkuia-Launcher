@@ -123,7 +123,7 @@ export component SettingsPanel inherits VerticalLayout {
                     padding-bottom: 18px;
 
                     Text {
-                        text: "목표 FPS에 맞춰 셰이더 품질과 LOD가 자동으로 조정돼요.";
+                        text: "목표 FPS에 맞춰 렌더링 해상도와 셰이더 품질이 자동으로 조정돼요.";
                         color: Theme.tick;
                         font-size: Typo.caption;
                     }
@@ -145,7 +145,7 @@ export component SettingsPanel inherits VerticalLayout {
 
                     ModRow {
                         name: "적응형 렌더링";
-                        description: "FPS 목표에 맞춰 셰이더 품질을 자동 조정";
+                        description: "FPS 목표에 맞춰 렌더링 해상도를 자동 조정";
                         enabled <=> root.adaptive-rendering;
                         toggled(on) => {
                             root.adaptive-changed(on);
