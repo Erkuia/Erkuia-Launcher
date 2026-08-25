@@ -101,16 +101,26 @@ export component ModRow inherits HorizontalLayout {
     callback toggled(bool);
     callback removed();
 
+    // Mod names and descriptions come from whatever is in the mods folder, so
+    // their length is not ours to control. Without eliding, a Text demands its
+    // whole string as minimum width and drags the fixed-width settings modal
+    // wider than the window, taking the toggles and the add button with it.
+    spacing: 12px;
+
     VerticalLayout {
         spacing: 2px;
         alignment: center;
-        horizontal-stretch: 0;
+        // Stretches so the text column absorbs the slack instead of dictating
+        // it; this is also what keeps the controls pinned to the right edge now
+        // that the spacer is gone.
+        horizontal-stretch: 1;
 
         Text {
             text: root.name;
             color: Theme.title;
             font-size: Typo.body;
             font-weight: Typo.semibold;
+            overflow: elide;
         }
 
         VerticalLayout {
@@ -121,13 +131,9 @@ export component ModRow inherits HorizontalLayout {
                 color: root.description == "" ? Theme.faint : Theme.muted;
                 font-italic: root.description == "";
                 font-size: Typo.caption;
+                overflow: elide;
             }
         }
-    }
-
-    Rectangle {
-        background: transparent;
-        horizontal-stretch: 1;
     }
 
     HorizontalLayout {
