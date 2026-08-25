@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "launcher": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "url": "https://github.com/Erkuia/Erkuia-Launcher/releases/latest/download/Erkuia-Launcher.exe",
     "size": 0,
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"

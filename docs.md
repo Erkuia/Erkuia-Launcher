@@ -57,8 +57,7 @@ Erkuia-Launcher.exe
 | --- | --- | --- |
 | Installer | Rust + Slint | 네이티브 설치 UI, 다운로드, 검증, 파일 배치 |
 | Launcher | Rust | 런처 UI, 업데이트, 모드 관리, JVM 실행 |
-| Client mod | Java 21 | Fabric/Mixin 기반 서버 자동 접속 및 클라이언트 제어 |
-| Rendering optimization | Java 21 + GLSL | FPS 목표, LOD, 셰이더 품질 조정 |
+| Client mod | Java 21 | Fabric 기반 서버 자동 접속 및 세션 종료 제어 |
 | Build / Packaging | Cargo, Gradle | Rust 실행 파일과 Minecraft 모드 빌드 |
 
 ## 브랜치 구조

@@ -30,7 +30,6 @@ Erkuia Launcher is a dedicated launcher for one server and one Minecraft version
 | Launcher app | Rust | UI, auth/session, updater, file verification, mod profile control |
 | JVM launcher | Rust | Java runtime detection, JVM argument generation, Minecraft process start |
 | Client mod | Java 21 | Fabric/Mixin hooks, server auto-connect, disconnect handling |
-| Adaptive renderer | Java 21 + GLSL | FPS target policy, LOD/mipmap policy, shader-level quality scaling |
 
 ## Launcher Flow
 
@@ -63,5 +62,4 @@ Open Erkuia-Launcher.exe
 
 - Remove unnecessary launcher-side UI and profile complexity.
 - Avoid keeping the launcher process resident while the game is running.
-- Support adaptive FPS behavior through the client mod.
 - Prefer loading control and runtime policy over unsafe deletion of Minecraft assets.
