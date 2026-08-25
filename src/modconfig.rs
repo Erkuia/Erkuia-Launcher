@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::config::{Config, MAX_FPS, MIN_FPS};
 
 pub const SCHEMA_VERSION: u32 = 1;
 pub const DIR_NAME: &str = "config";
@@ -18,21 +17,15 @@ pub struct ModConfig {
     pub schema_version: u32,
     #[serde(rename = "serverAddress")]
     pub server_address: String,
-    #[serde(rename = "targetFps")]
-    pub target_fps: i32,
-    #[serde(rename = "adaptiveRendering")]
-    pub adaptive_rendering: bool,
     #[serde(rename = "launcherVersion")]
     pub launcher_version: String,
 }
 
 impl ModConfig {
-    pub fn from_settings(settings: &Config, server_address: &str, launcher_version: &str) -> Self {
+    pub fn new(server_address: &str, launcher_version: &str) -> Self {
         Self {
             schema_version: SCHEMA_VERSION,
             server_address: server_address.trim().to_string(),
-            target_fps: settings.target_fps.clamp(MIN_FPS, MAX_FPS),
-            adaptive_rendering: settings.adaptive_rendering,
             launcher_version: launcher_version.to_string(),
         }
     }
@@ -66,14 +59,6 @@ pub fn write(minecraft_dir: &Path, config: &ModConfig) -> anyhow::Result<()> {
 mod tests {
     use super::*;
 
-    fn settings(target_fps: i32, adaptive_rendering: bool) -> Config {
-        Config {
-            target_fps,
-            adaptive_rendering,
-            ..Config::default()
-        }
-    }
-
     fn temp_dir(tag: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
             "erkuia-modconfig-{tag}-{}-{}",
@@ -95,45 +80,29 @@ mod tests {
 
     #[test]
     fn the_settings_are_carried_over() {
-        let config = ModConfig::from_settings(&settings(120, false), "erkuia.kr", "0.1.0");
+        let config = ModConfig::new("erkuia.kr", "0.1.0");
 
         assert_eq!(config.schema_version, SCHEMA_VERSION);
         assert_eq!(config.server_address, "erkuia.kr");
-        assert_eq!(config.target_fps, 120);
-        assert!(!config.adaptive_rendering);
         assert_eq!(config.launcher_version, "0.1.0");
     }
 
     #[test]
-    fn an_out_of_range_fps_is_clamped_before_the_mod_sees_it() {
-        assert_eq!(
-            ModConfig::from_settings(&settings(5000, true), "erkuia.kr", "0.1.0").target_fps,
-            MAX_FPS
-        );
-        assert_eq!(
-            ModConfig::from_settings(&settings(1, true), "erkuia.kr", "0.1.0").target_fps,
-            MIN_FPS
-        );
-    }
-
-    #[test]
     fn the_address_is_trimmed() {
-        let config = ModConfig::from_settings(&settings(60, true), "  erkuia.kr\n", "0.1.0");
+        let config = ModConfig::new("  erkuia.kr\n", "0.1.0");
 
         assert_eq!(config.server_address, "erkuia.kr");
     }
 
     #[test]
     fn the_json_uses_the_documented_key_names() {
-        let json = ModConfig::from_settings(&settings(90, true), "erkuia.kr", "0.1.0")
+        let json = ModConfig::new("erkuia.kr", "0.1.0")
             .to_json()
             .unwrap();
 
         for key in [
             "schemaVersion",
             "serverAddress",
-            "targetFps",
-            "adaptiveRendering",
             "launcherVersion",
         ] {
             assert!(json.contains(key), "{key} is missing from {json}");
@@ -142,7 +111,7 @@ mod tests {
 
     #[test]
     fn it_survives_a_round_trip() {
-        let config = ModConfig::from_settings(&settings(90, true), "erkuia.kr", "0.1.0");
+        let config = ModConfig::new("erkuia.kr", "0.1.0");
         let parsed: ModConfig = serde_json::from_str(&config.to_json().unwrap()).unwrap();
 
         assert_eq!(parsed, config);
@@ -151,7 +120,7 @@ mod tests {
     #[test]
     fn writing_creates_the_config_folder() {
         let root = temp_dir("write");
-        let config = ModConfig::from_settings(&settings(60, true), "erkuia.kr", "0.1.0");
+        let config = ModConfig::new("erkuia.kr", "0.1.0");
 
         write(&root, &config).unwrap();
 
@@ -165,8 +134,8 @@ mod tests {
     fn a_second_write_replaces_the_first() {
         let root = temp_dir("replace");
 
-        write(&root, &ModConfig::from_settings(&settings(60, true), "erkuia.kr", "0.1.0")).unwrap();
-        let second = ModConfig::from_settings(&settings(120, false), "erkuia.kr", "0.1.0");
+        write(&root, &ModConfig::new("old.erkuia.kr", "0.1.0")).unwrap();
+        let second = ModConfig::new("erkuia.kr", "0.2.0");
         write(&root, &second).unwrap();
 
         let text = std::fs::read_to_string(path_in(&root)).unwrap();

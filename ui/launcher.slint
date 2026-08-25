@@ -2,7 +2,6 @@ import { Theme, Typo } from "theme.slint";
 import { TitleBar } from "title_bar.slint";
 import { PrimaryButton, ProgressBar, SecondaryButton, AccentButton, TextButton, Toggle, Badge, Divider, ReadOnlyField } from "controls.slint";
 import { ErrorModal } from "error.slint";
-import { ValueSlider } from "slider.slint";
 import { ModalOverlay, Popover } from "overlays.slint";
 import { ProfileChip, ProfileMenu, Account } from "profile.slint";
 import { SettingsPanel } from "settings.slint";
@@ -32,8 +31,6 @@ export component LauncherWindow inherits Window {
     in-out property <bool> profile-open;
     in-out property <bool> settings-open;
 
-    in-out property <int> target-fps: 105;
-    in-out property <bool> adaptive-rendering: true;
     in-out property <[ModEntry]> local-mods;
 
     in-out property <bool> busy;
@@ -57,8 +54,6 @@ export component LauncherWindow inherits Window {
     callback logout-clicked();
     callback switch-account(string);
     callback open-directory-clicked();
-    callback fps-changed(int);
-    callback adaptive-changed(bool);
     callback add-mod-clicked();
     callback toggle-mod(string, bool);
     callback remove-mod(string);
@@ -378,15 +373,7 @@ export component LauncherWindow inherits Window {
 
                         SettingsPanel {
                             program-directory: root.program-directory;
-                            target-fps <=> root.target-fps;
-                            adaptive-rendering <=> root.adaptive-rendering;
                             local-mods: root.local-mods;
-                            fps-changed(fps) => {
-                                root.fps-changed(fps);
-                            }
-                            adaptive-changed(on) => {
-                                root.adaptive-changed(on);
-                            }
                             add-mod => {
                                 root.add-mod-clicked();
                             }

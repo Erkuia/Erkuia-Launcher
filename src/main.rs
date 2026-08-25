@@ -9,7 +9,7 @@ use std::{
 };
 
 use anyhow::{bail, Context};
-use slint::{PhysicalPosition, TimerMode};
+use slint::PhysicalPosition;
 
 mod auth;
 mod bundled;
@@ -49,8 +49,6 @@ use paths::Paths;
 use task::{Cancel, Stage};
 
 slint::include_modules!();
-
-const SAVE_DEBOUNCE: Duration = Duration::from_millis(400);
 
 #[derive(Clone, Copy)]
 struct TitleDragState {
@@ -164,24 +162,8 @@ fn main() -> anyhow::Result<()> {
     );
 
     let state = AppState::new();
-    let save_timer = Rc::new(slint::Timer::default());
 
     start_up(&app, &state);
-
-    let schedule_save = {
-        let timer = Rc::clone(&save_timer);
-        let state = state.clone();
-        let app_weak = app.as_weak();
-
-        move || {
-            let state = state.clone();
-            let app_weak = app_weak.clone();
-
-            timer.start(TimerMode::SingleShot, SAVE_DEBOUNCE, move || {
-                persist_or_report(&state, &app_weak);
-            });
-        }
-    };
 
     let title_drag_state = Rc::new(RefCell::new(None::<TitleDragState>));
 
@@ -244,27 +226,6 @@ fn main() -> anyhow::Result<()> {
             if let Err(error) = shell::open(&dir.display().to_string()) {
                 log::warn!("폴더를 열지 못했습니다: {error:#}");
             }
-        }
-    });
-
-    app.on_fps_changed({
-        let state = state.clone();
-        let schedule_save = schedule_save.clone();
-        move |fps| {
-            if let Ok(mut settings) = state.settings.lock() {
-                settings.target_fps = fps;
-            }
-            schedule_save();
-        }
-    });
-
-    app.on_adaptive_changed({
-        let state = state.clone();
-        move |enabled| {
-            if let Ok(mut settings) = state.settings.lock() {
-                settings.adaptive_rendering = enabled;
-            }
-            schedule_save();
         }
     });
 
@@ -416,12 +377,10 @@ fn main() -> anyhow::Result<()> {
         let app = app.as_weak();
         let title_drag_state = Rc::clone(&title_drag_state);
         let state = state.clone();
-        let save_timer = Rc::clone(&save_timer);
         move || {
             *title_drag_state.borrow_mut() = None;
             state.cancel.cancel();
 
-            save_timer.stop();
             persist_or_report(&state, &app);
 
             if let Some(app) = app.upgrade() {
@@ -489,9 +448,6 @@ fn start_up(app: &LauncherWindow, state: &AppState) {
             SecretStore::new()
         }
     };
-
-    app.set_target_fps(loaded.target_fps);
-    app.set_adaptive_rendering(loaded.adaptive_rendering);
 
     if let Ok(mut settings) = state.settings.lock() {
         *settings = loaded;

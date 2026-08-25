@@ -1,7 +1,6 @@
 import { ScrollView } from "std-widgets.slint";
 import { Theme, Typo } from "theme.slint";
 import { SecondaryButton, ReadOnlyField, Divider } from "controls.slint";
-import { ValueSlider } from "slider.slint";
 import { ModRow, AddModButton, ModEntry } from "mods.slint";
 
 component SectionLabel inherits VerticalLayout {
@@ -46,13 +45,9 @@ component CloseButton inherits Rectangle {
 
 export component SettingsPanel inherits VerticalLayout {
     in property <string> program-directory;
-    in-out property <int> target-fps;
-    in-out property <bool> adaptive-rendering;
     in property <[ModEntry]> local-mods;
     callback close();
     callback open-directory();
-    callback fps-changed(int);
-    callback adaptive-changed(bool);
     callback add-mod();
     callback toggle-mod(string, bool);
     callback remove-mod(string);
@@ -97,60 +92,12 @@ export component SettingsPanel inherits VerticalLayout {
                 spacing: 4px;
 
                 SectionLabel {
-                    text: "렌더링";
-                }
-
-                VerticalLayout {
-                    padding-top: 6px;
-                    padding-bottom: 2px;
-
-                    Text {
-                        text: "목표 FPS";
-                        color: Theme.strong;
-                        font-size: Typo.body;
-                    }
-                }
-
-                ValueSlider {
-                    value <=> root.target-fps;
-                    changed(fps) => {
-                        root.fps-changed(fps);
-                    }
-                }
-
-                VerticalLayout {
-                    padding-top: 6px;
-                    padding-bottom: 18px;
-
-                    Text {
-                        text: "목표 FPS에 맞춰 렌더링 해상도와 셰이더 품질이 자동으로 조정돼요.";
-                        color: Theme.tick;
-                        font-size: Typo.caption;
-                    }
-                }
-
-                Divider { }
-
-                VerticalLayout {
-                    padding-top: 18px;
-
-                    SectionLabel {
-                        text: "모드";
-                    }
+                    text: "모드";
                 }
 
                 VerticalLayout {
                     padding-top: 8px;
                     spacing: 14px;
-
-                    ModRow {
-                        name: "적응형 렌더링";
-                        description: "FPS 목표에 맞춰 렌더링 해상도를 자동 조정";
-                        enabled <=> root.adaptive-rendering;
-                        toggled(on) => {
-                            root.adaptive-changed(on);
-                        }
-                    }
 
                     for entry in root.local-mods: ModRow {
                         name: entry.name;

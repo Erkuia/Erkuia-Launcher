@@ -101,11 +101,7 @@ pub fn run(
     reporter.progress(Stage::Launch, 0.0, "실행 준비 중...");
     modconfig::write(
         &minecraft_dir,
-        &ModConfig::from_settings(
-            settings,
-            &manifest.server.address,
-            env!("CARGO_PKG_VERSION"),
-        ),
+        &ModConfig::new(&manifest.server.address, env!("CARGO_PKG_VERSION")),
     )?;
 
     let natives_dir = launch::natives_version_dir(&paths.natives_dir(), &plan.version.id);

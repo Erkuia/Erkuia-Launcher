@@ -3,10 +3,6 @@ use std::path::Path;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-pub const MIN_FPS: i32 = 30;
-pub const MAX_FPS: i32 = 150;
-pub const DEFAULT_FPS: i32 = 60;
-
 /// Non-secret half of a signed-in account.
 ///
 /// Refresh tokens never live here — `config.json` is plain text. They go into
@@ -27,38 +23,18 @@ impl AccountRecord {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Serde ignores keys it does not know, which is the whole migration story for
+/// this file: `target_fps` and `adaptive_rendering` are simply not read any
+/// more, and the next save writes the struct without them. An older config
+/// loads, works, and quietly loses the two dead keys.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
-    #[serde(default = "default_fps")]
-    pub target_fps: i32,
-    #[serde(default = "default_adaptive_rendering")]
-    pub adaptive_rendering: bool,
     #[serde(default)]
     pub managed_mods: Vec<String>,
     #[serde(default)]
     pub accounts: Vec<AccountRecord>,
     #[serde(default)]
     pub selected_account: Option<String>,
-}
-
-fn default_fps() -> i32 {
-    DEFAULT_FPS
-}
-
-fn default_adaptive_rendering() -> bool {
-    true
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            target_fps: default_fps(),
-            adaptive_rendering: default_adaptive_rendering(),
-            managed_mods: Vec::new(),
-            accounts: Vec::new(),
-            selected_account: None,
-        }
-    }
 }
 
 impl Config {
@@ -98,7 +74,6 @@ impl Config {
     }
 
     pub fn normalized(mut self) -> Self {
-        self.target_fps = self.target_fps.clamp(MIN_FPS, MAX_FPS);
         self.accounts.dedup_by(|a, b| a.id == b.id);
 
         if !self
@@ -196,10 +171,9 @@ mod tests {
     fn round_trips_through_disk() {
         let dir = TempDir::new("roundtrip");
         let config = Config {
-            target_fps: 90,
-            adaptive_rendering: false,
             accounts: vec![account("a", "Erkuia_Player"), account("b", "Erkuia_Player2")],
             selected_account: Some("b".to_string()),
+            ..Config::default()
         };
 
         config.save(&dir.file()).unwrap();
@@ -269,23 +243,35 @@ mod tests {
     #[test]
     fn unknown_and_missing_fields_fall_back_to_defaults() {
         let dir = TempDir::new("partial");
-        std::fs::write(dir.file(), r#"{"target_fps": 90, "future_option": 1}"#).unwrap();
+        std::fs::write(dir.file(), r#"{"future_option": 1}"#).unwrap();
 
         let config = Config::load(&dir.file()).unwrap();
 
-        assert_eq!(config.target_fps, 90);
-        assert!(config.adaptive_rendering);
-        assert_eq!(config.selected_account, None);
+        assert_eq!(config, Config::default());
     }
 
+    /// The migration, such as it is: a config written by a launcher that still
+    /// had the adaptive rendering settings has to load, and the dead keys have
+    /// to be gone once it is written back.
     #[test]
-    fn fps_is_clamped_to_the_slider_range() {
-        let dir = TempDir::new("clamp");
-        std::fs::write(dir.file(), r#"{"target_fps": 9000}"#).unwrap();
-        assert_eq!(Config::load(&dir.file()).unwrap().target_fps, MAX_FPS);
+    fn the_retired_frame_settings_are_dropped_on_the_next_save() {
+        let dir = TempDir::new("retired");
+        std::fs::write(
+            dir.file(),
+            r#"{"target_fps": 90, "adaptive_rendering": false, "managed_mods": ["a.jar"]}"#,
+        )
+        .unwrap();
 
-        std::fs::write(dir.file(), r#"{"target_fps": -5}"#).unwrap();
-        assert_eq!(Config::load(&dir.file()).unwrap().target_fps, MIN_FPS);
+        let config = Config::load(&dir.file()).unwrap();
+
+        assert_eq!(config.managed_mods, vec!["a.jar".to_string()]);
+
+        config.save(&dir.file()).unwrap();
+        let written = std::fs::read_to_string(dir.file()).unwrap();
+
+        assert!(!written.contains("target_fps"), "{written}");
+        assert!(!written.contains("adaptive_rendering"), "{written}");
+        assert!(written.contains("managed_mods"), "{written}");
     }
 
     #[test]
