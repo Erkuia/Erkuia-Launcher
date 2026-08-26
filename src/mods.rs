@@ -498,7 +498,7 @@ mod tests {
                 "mods": [{
                     "id": "fabric-api",
                     "name": "Fabric API",
-                    "description": "Erkuia Launcher Mod 가 요구하는 기반 모드",
+                    "description": "Erkuia Support 가 요구하는 기반 모드",
                     "required": true,
                     "url": "https://example.invalid/fabric-api.jar",
                     "fileName": "fabric-api-0.119.4+1.21.4.jar",
@@ -564,7 +564,7 @@ mod tests {
         assert_eq!(entries[0].kind, ModKind::Required);
         assert_eq!(entries[0].id, "fabric-api");
         assert_eq!(entries[0].name, "Fabric API");
-        assert_eq!(entries[0].description, "Erkuia Launcher Mod 가 요구하는 기반 모드");
+        assert_eq!(entries[0].description, "Erkuia Support 가 요구하는 기반 모드");
     }
 
     #[test]

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "launcher": {
-    "version": "0.1.2",
+    "version": "0.1.4",
     "url": "https://github.com/Erkuia/Erkuia-Launcher/releases/latest/download/Erkuia-Launcher.exe",
     "size": 0,
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
@@ -17,7 +17,7 @@
     {
       "id": "fabric-api",
       "name": "Fabric API",
-      "description": "Erkuia Launcher Mod 가 요구하는 기반 모드",
+      "description": "Erkuia Support 가 요구하는 기반 모드",
       "required": true,
       "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/p96k10UR/fabric-api-0.119.4%2B1.21.4.jar",
       "fileName": "fabric-api-0.119.4+1.21.4.jar",
