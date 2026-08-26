@@ -43,6 +43,20 @@ export component LauncherWindow inherits Window {
     in-out property <string> error-message;
     in-out property <bool> error-retryable: true;
 
+    // Idle means the poll has not run yet, which is not the same as down. Only
+    // an actual failed query blocks the button; treating "not yet asked" as
+    // offline would grey the button out for a second after every sign-in.
+    property <bool> server-unreachable: !root.server-online && !root.server-idle;
+
+    property <bool> can-start: root.signed-in && !root.server-unreachable;
+
+    // The launch progress message wins while it is running. Otherwise the hint
+    // explains whichever thing is stopping the button from working — and says
+    // nothing at all when neither is.
+    property <string> hint-text: root.status-hint != ""
+        ? root.status-hint
+        : (root.can-start || !root.signed-in ? "" : "서버가 응답하지 않아요. 잠시 후 다시 시도해 주세요");
+
     callback title-drag-started(float, float);
     callback title-drag-moved(float, float);
     callback title-drag-ended();
@@ -275,7 +289,7 @@ export component LauncherWindow inherits Window {
 
                                 if !root.busy: PrimaryButton {
                                     text: "시작";
-                                    enabled: root.signed-in;
+                                    enabled: root.can-start;
                                     clicked => {
                                         root.start-clicked();
                                     }
@@ -298,8 +312,8 @@ export component LauncherWindow inherits Window {
                                 padding-bottom: 2px;
 
                                 Text {
-                                    text: root.status-hint;
-                                    visible: root.status-hint != "";
+                                    text: root.hint-text;
+                                    visible: root.hint-text != "";
                                     color: Theme.disabled-text;
                                     font-size: Typo.small;
                                     horizontal-alignment: center;
