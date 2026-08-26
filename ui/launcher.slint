@@ -48,14 +48,10 @@ export component LauncherWindow inherits Window {
     // offline would grey the button out for a second after every sign-in.
     property <bool> server-unreachable: !root.server-online && !root.server-idle;
 
+    // Deliberately not explained in words below the button: the status row
+    // right above already says 오프라인 in red, and repeating it as a sentence
+    // was noise.
     property <bool> can-start: root.signed-in && !root.server-unreachable;
-
-    // The launch progress message wins while it is running. Otherwise the hint
-    // explains whichever thing is stopping the button from working — and says
-    // nothing at all when neither is.
-    property <string> hint-text: root.status-hint != ""
-        ? root.status-hint
-        : (root.can-start || !root.signed-in ? "" : "서버가 응답하지 않아요. 잠시 후 다시 시도해 주세요");
 
     callback title-drag-started(float, float);
     callback title-drag-moved(float, float);
@@ -312,8 +308,8 @@ export component LauncherWindow inherits Window {
                                 padding-bottom: 2px;
 
                                 Text {
-                                    text: root.hint-text;
-                                    visible: root.hint-text != "";
+                                    text: root.status-hint;
+                                    visible: root.status-hint != "";
                                     color: Theme.disabled-text;
                                     font-size: Typo.small;
                                     horizontal-alignment: center;
