@@ -21,10 +21,11 @@ pub const DEFAULT_PORT: u16 = 25565;
 /// hole does not hold the poll loop past its next tick.
 const TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The protocol version is sent as `-1`, the documented "just asking" value.
-/// Naming a real version would make a server with a version filter answer
-/// differently, and this is a status query, not a join.
-const PROTOCOL_UNKNOWN: i32 = -1;
+/// 47 is the 1.8 protocol, and it is what every status tool sends. `-1` is the
+/// documented "just asking" value, but proxies and anti-bot plugins are known to
+/// refuse it, and a refused ping is indistinguishable from a server that is
+/// down. A number every server has seen for a decade gets an answer.
+const PROTOCOL_PING: i32 = 47;
 
 /// A status response is a JSON blob of arbitrary size (MOTD, favicon, sample
 /// player list). The favicon alone is routinely 20 KB, so the cap is generous —
@@ -130,11 +131,21 @@ pub fn query(address: &str) -> ServerStatus {
 }
 
 fn probe(host: &str, port: u16) -> anyhow::Result<ServerStatus> {
+    // Where to connect, which is not necessarily what the player typed.
+    let (connect_host, connect_port) = match crate::dns::lookup_minecraft_srv(host) {
+        Some(srv) => (srv.host, srv.port),
+        None => (host.to_string(), port),
+    };
+
+    let target = resolve(&connect_host, connect_port)?;
+
+    // The clock starts here, not at the top: name resolution is not something
+    // the server is answerable for, and a cold DNS lookup would otherwise show
+    // up as a second of ping that nobody would ever see again.
     let started = Instant::now();
 
-    let target = resolve(host, port)?;
     let mut stream = TcpStream::connect_timeout(&target, TIMEOUT)
-        .with_context(|| format!("{host}:{port} 에 연결하지 못했어요."))?;
+        .with_context(|| format!("{connect_host}:{connect_port} 에 연결하지 못했어요."))?;
 
     stream.set_read_timeout(Some(TIMEOUT))?;
     stream.set_write_timeout(Some(TIMEOUT))?;
@@ -142,10 +153,13 @@ fn probe(host: &str, port: u16) -> anyhow::Result<ServerStatus> {
     // saves a round trip that would otherwise land inside the ping we report.
     stream.set_nodelay(true)?;
 
+    // The address the player typed goes in the handshake even when SRV sent us
+    // somewhere else: a proxy routes on that name, and handing it the resolved
+    // node instead lands on the wrong backend or none at all.
     let mut handshake = Vec::new();
-    write_varint(&mut handshake, PROTOCOL_UNKNOWN);
+    write_varint(&mut handshake, PROTOCOL_PING);
     write_string(&mut handshake, host);
-    handshake.extend_from_slice(&port.to_be_bytes());
+    handshake.extend_from_slice(&connect_port.to_be_bytes());
     write_varint(&mut handshake, 1); // next state: status
 
     write_packet(&mut stream, 0x00, &handshake)?;
@@ -344,12 +358,12 @@ mod tests {
     #[test]
     fn a_negative_varint_uses_the_full_five_bytes() {
         let mut buffer = Vec::new();
-        write_varint(&mut buffer, PROTOCOL_UNKNOWN);
+        write_varint(&mut buffer, -1);
 
         assert_eq!(buffer.len(), 5);
 
         let mut cursor = &buffer[..];
-        assert_eq!(read_varint(&mut cursor).unwrap(), PROTOCOL_UNKNOWN);
+        assert_eq!(read_varint(&mut cursor).unwrap(), -1);
     }
 
     #[test]

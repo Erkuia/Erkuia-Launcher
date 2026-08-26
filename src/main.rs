@@ -14,6 +14,7 @@ use slint::PhysicalPosition;
 mod auth;
 mod bundled;
 mod config;
+mod dns;
 mod error;
 mod flow;
 mod hash;
