@@ -140,9 +140,48 @@ impl AppState {
 /// window, because the process that asked for it is still running and will
 /// relaunch once this returns.
 fn run_update_helper(staged: &Path) -> anyhow::Result<()> {
-    let exe = std::env::current_exe().context("failed to resolve current executable")?;
+    // This half runs with no console and no window, so a returned error reaches
+    // nobody: the parent only sees the exit code. Logging has to be up before
+    // anything can fail, or a failure here is indistinguishable from any other.
+    //
+    // The staged file sits in the data folder of the account that started the
+    // update, and elevation can hand this process a different account whose
+    // APPDATA points somewhere else entirely. Deriving the folder from the path
+    // we were given puts the log where the person will actually look for it.
+    let data_dir = staged
+        .parent()
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
+        .map(Paths::with_data_dir)
+        .or_else(|| Paths::resolve().ok());
 
-    selfupdate::install(staged, &exe)
+    if let Some(resolved) = data_dir {
+        logger::init(&resolved.logs_dir()).ok();
+    }
+
+    let exe = match std::env::current_exe() {
+        Ok(exe) => exe,
+        Err(error) => {
+            log::error!("[UPDATE] 실행 파일 경로를 찾지 못했습니다: {error}");
+
+            return Err(error).context("failed to resolve current executable");
+        }
+    };
+
+    log::info!(
+        "[UPDATE] 관리자 권한으로 교체를 시작합니다: {} -> {}",
+        staged.display(),
+        exe.display()
+    );
+
+    match selfupdate::install(staged, &exe) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            log::error!("[UPDATE] 교체하지 못했습니다: {error:#}");
+
+            Err(error)
+        }
+    }
 }
 
 fn main() -> anyhow::Result<()> {

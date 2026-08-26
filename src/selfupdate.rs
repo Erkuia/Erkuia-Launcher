@@ -95,27 +95,90 @@ pub fn is_writable(dir: &Path) -> bool {
 /// exits, which is why cleanup happens on the next start instead of here.
 pub fn install(staged: &Path, exe: &Path) -> anyhow::Result<()> {
     if !staged.is_file() {
-        bail!("받아둔 파일을 찾지 못했어요: {}", staged.display());
+        bail!(
+            "받아둔 파일을 찾지 못했어요: {} ({})",
+            staged.display(),
+            match std::fs::metadata(staged) {
+                Ok(meta) => format!("파일이 아니라 {} 바이트짜리 항목", meta.len()),
+                Err(error) => describe(&error),
+            }
+        );
     }
 
-    let backup = backup_path(exe);
-    std::fs::remove_file(&backup).ok();
-
-    std::fs::rename(exe, &backup)
-        .with_context(|| format!("{} 을(를) 옮기지 못했어요.", exe.display()))?;
+    let backup = move_aside(exe)?;
 
     if let Err(error) = std::fs::copy(staged, exe) {
         // Putting the old executable back matters more than the update: without
         // it there is nothing left to launch.
         std::fs::rename(&backup, exe).ok();
 
-        return Err(error)
-            .with_context(|| format!("{} 을(를) 교체하지 못했어요.", exe.display()));
+        bail!(
+            "{} 을(를) 교체하지 못했어요: {}",
+            exe.display(),
+            describe(&error)
+        );
     }
 
     log::info!("런처를 교체했습니다: {}", exe.display());
 
     Ok(())
+}
+
+/// Moves the live executable out of the way and reports where it went.
+///
+/// The plain `.old` name is tried first, because cleanup on the next start
+/// looks for exactly that. It can fail for a reason retrying will not fix: a
+/// backup from an earlier update is still mapped by a process that has not
+/// exited, and Windows will neither delete nor overwrite a file in that state.
+/// A name nothing can be holding gets the update through anyway, and the same
+/// cleanup collects it later.
+fn move_aside(exe: &Path) -> anyhow::Result<PathBuf> {
+    let backup = backup_path(exe);
+    std::fs::remove_file(&backup).ok();
+
+    match std::fs::rename(exe, &backup) {
+        Ok(()) => return Ok(backup),
+        Err(error) => log::warn!(
+            "{} 로 옮기지 못해 다른 이름으로 시도합니다: {}",
+            backup.display(),
+            describe(&error)
+        ),
+    }
+
+    let fallback = unique_backup_path(exe);
+
+    if let Err(error) = std::fs::rename(exe, &fallback) {
+        bail!(
+            "{} 을(를) 옮기지 못했어요: {}",
+            exe.display(),
+            describe(&error)
+        );
+    }
+
+    log::info!("이전 런처를 {} 로 옮겼습니다.", fallback.display());
+
+    Ok(fallback)
+}
+
+fn unique_backup_path(exe: &Path) -> PathBuf {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos())
+        .unwrap_or(0);
+
+    let mut name = exe.as_os_str().to_os_string();
+    name.push(format!(".{stamp}{BACKUP_SUFFIX}"));
+
+    PathBuf::from(name)
+}
+
+/// Keeps the OS error number in the message. "액세스가 거부되었습니다" alone does
+/// not say which of the several things this function touches was refused.
+fn describe(error: &std::io::Error) -> String {
+    match error.raw_os_error() {
+        Some(code) => format!("{error} (OS 오류 {code})"),
+        None => error.to_string(),
+    }
 }
 
 /// Removes executables left behind by an earlier update. Failure is ignored:
@@ -158,7 +221,9 @@ pub fn install_elevated(staged: &Path, exe: &Path) -> anyhow::Result<()> {
     let code = crate::shell::run_as_admin_and_wait(&exe.display().to_string(), &parameters)?;
 
     if code != 0 {
-        bail!("업데이트 적용에 실패했어요. (종료 코드 {code})");
+        // The elevated half writes the reason to the same log before it exits,
+        // so the code is only a pointer to where the answer already is.
+        bail!("업데이트 적용에 실패했어요. 자세한 내용은 launcher.log 를 봐주세요. (종료 코드 {code})");
     }
 
     Ok(())
@@ -216,6 +281,49 @@ mod tests {
         assert!(backup.ends_with("Erkuia-Launcher.exe.old"));
         assert!(is_backup(&backup));
         assert!(!is_backup(Path::new("Erkuia-Launcher.exe")));
+    }
+
+    #[test]
+    fn the_fallback_backup_is_still_collected_by_cleanup() {
+        let exe = Path::new(r"C:\Program Files\Erkuia\Erkuia-Launcher.exe");
+        let fallback = unique_backup_path(exe);
+
+        // Cleanup only looks at the suffix, so a name it cannot recognise would
+        // leave the file behind forever.
+        assert!(is_backup(&fallback));
+        assert_ne!(fallback, backup_path(exe));
+        assert_eq!(fallback.parent(), exe.parent());
+    }
+
+    #[test]
+    fn install_reports_a_missing_download_instead_of_touching_the_executable() {
+        let dir = temp_dir("missing");
+        let exe = dir.join("Erkuia-Launcher.exe");
+        std::fs::write(&exe, b"original").unwrap();
+
+        let error = install(&dir.join("nope.exe"), &exe).unwrap_err();
+
+        assert!(error.to_string().contains("찾지 못했어요"));
+        assert_eq!(std::fs::read(&exe).unwrap(), b"original");
+        assert!(!backup_path(&exe).exists());
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn install_moves_the_old_executable_aside_and_puts_the_new_one_in_place() {
+        let dir = temp_dir("install");
+        let exe = dir.join("Erkuia-Launcher.exe");
+        let staged = dir.join("Erkuia-Launcher-0.2.0.exe");
+        std::fs::write(&exe, b"old").unwrap();
+        std::fs::write(&staged, b"new").unwrap();
+
+        install(&staged, &exe).unwrap();
+
+        assert_eq!(std::fs::read(&exe).unwrap(), b"new");
+        assert_eq!(std::fs::read(backup_path(&exe)).unwrap(), b"old");
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
