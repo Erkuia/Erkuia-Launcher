@@ -23,7 +23,11 @@ export component ModalOverlay inherits Rectangle {
 
             Rectangle {
                 width: Theme.modal-width;
-                height: Theme.modal-height;
+                // Follows its content instead of standing at a fixed height. A
+                // short mod list used to leave a band of dead space above the
+                // footer, because the panel was stretching to fill 560px that
+                // nothing needed.
+                height: Math.min(Theme.modal-height, body.preferred-height);
                 border-radius: Theme.radius-modal;
                 background: Theme.raised;
                 drop-shadow-blur: Theme.shadow-modal-blur;
@@ -32,7 +36,7 @@ export component ModalOverlay inherits Rectangle {
 
                 TouchArea { }
 
-                VerticalLayout {
+                body := VerticalLayout {
                     padding-left: Theme.modal-pad-x;
                     padding-right: Theme.modal-pad-x;
                     padding-top: Theme.modal-pad-top;

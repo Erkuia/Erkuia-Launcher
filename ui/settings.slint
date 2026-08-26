@@ -82,11 +82,18 @@ export component SettingsPanel inherits VerticalLayout {
     }
 
     VerticalLayout {
-        vertical-stretch: 1;
+        // Not stretchy any more: the scroll area is as tall as the list, so
+        // there is no slack for this to swallow and hand back as a gap.
+        vertical-stretch: 0;
         padding-top: 4px;
 
         ScrollView {
-            VerticalLayout {
+            // Reading the list's preferred height rather than filling. The cap
+            // is what turns it back into a scroller once enough mods are
+            // installed to need one.
+            height: Math.min(Theme.settings-list-max-height, list.preferred-height);
+
+            list := VerticalLayout {
                 padding-right: 12px;
                 padding-top: 16px;
                 spacing: 4px;
@@ -119,15 +126,6 @@ export component SettingsPanel inherits VerticalLayout {
                             root.add-mod();
                         }
                     }
-                }
-
-                // Soaks up whatever height the mod list does not use. Without it
-                // a short list leaves the layout with spare room to distribute,
-                // and it goes into the gaps between the section label and the
-                // rows rather than below them.
-                Rectangle {
-                    background: transparent;
-                    vertical-stretch: 1;
                 }
             }
         }
