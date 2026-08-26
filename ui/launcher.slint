@@ -234,8 +234,11 @@ export component LauncherWindow inherits Window {
                                         width: 7px;
                                         height: 7px;
                                         border-radius: 3.5px;
+                                        // Lifted for the dark ground; the
+                                        // light-theme green read as almost
+                                        // black next to it.
                                         background: root.server-online
-                                            ? #2f9e44
+                                            ? #4ec26a
                                             : (root.server-idle ? Theme.control-off : Theme.danger);
                                     }
                                 }

@@ -1,41 +1,53 @@
 export global Theme {
-    out property <color> surface: #fcfdff;
-    out property <color> raised: #ffffff;
-    out property <color> frame-border: #d5d8db;
-    out property <color> line: #e2e5e8;
+    // A warm near-black ground. Panels sit a step lighter rather than a step
+    // darker, which is the whole reason the text ramp below is inverted from
+    // what a light theme would use.
+    out property <color> surface: #211e1d;
+    out property <color> raised: #2b2827;
+    out property <color> frame-border: #423e3c;
+    out property <color> line: #3a3634;
 
-    out property <color> accent: #0568e9;
-    out property <color> accent-hover: #0a5fd1;
-    out property <color> accent-pressed: #0450b4;
-    out property <color> on-accent: #ffffff;
-    out property <color> danger: #e24947;
-    out property <color> danger-pressed: #c02c2c;
+    // On a dark ground the accent has to be the light thing, so the primary
+    // button is near-white with dark text on it. Keeps the monochrome logo and
+    // the one pressable thing speaking the same language.
+    out property <color> accent: #e9e6e4;
+    out property <color> accent-hover: #f5f3f1;
+    out property <color> accent-pressed: #d0cdcb;
+    out property <color> on-accent: #211e1d;
+    // Lifted well off the background: the light-theme red went muddy here.
+    out property <color> danger: #e2645e;
+    out property <color> danger-pressed: #c9524c;
 
-    out property <color> heading: #141619;
-    out property <color> title: #1f2224;
-    out property <color> menu-text: #2c2e31;
-    out property <color> strong: #45484b;
-    out property <color> body: #535659;
-    out property <color> label: #616467;
-    out property <color> secondary: #6f7275;
-    out property <color> muted: #787b7e;
-    out property <color> tick: #7e8084;
-    out property <color> disabled-text: #83868a;
-    out property <color> faint: #95999c;
+    // Inverted ramp, brightest first.
+    out property <color> heading: #f5f3f2;
+    out property <color> title: #e9e6e4;
+    out property <color> menu-text: #ddd9d7;
+    out property <color> strong: #cec9c7;
+    out property <color> body: #bdb8b6;
+    out property <color> label: #aeaaa7;
+    out property <color> secondary: #a29d9a;
+    out property <color> muted: #96918e;
+    out property <color> tick: #8b8683;
+    out property <color> disabled-text: #7f7a77;
+    out property <color> faint: #726d6a;
 
-    out property <color> control: #dbdee2;
-    out property <color> control-off: #cbced2;
-    out property <color> badge: #e8ebef;
-    out property <color> dashed-border: #c1c4c8;
+    out property <color> control: #4a4543;
+    out property <color> control-off: #3d3937;
+    out property <color> badge: #35312f;
+    out property <color> dashed-border: #4d4846;
 
-    out property <color> field-background: #eff2f6;
-    out property <color> field-border: #dbdee2;
-    out property <color> field-text: #383b3e;
-    out property <color> button-border: #ced1d5;
+    // Inputs go darker than the panel they sit in — the one place where "below"
+    // still reads as inset on a dark theme.
+    out property <color> field-background: #1a1817;
+    out property <color> field-border: #45403e;
+    out property <color> field-text: #ddd9d7;
+    out property <color> button-border: #45403e;
 
-    out property <color> tooltip: #141619;
-    out property <color> tooltip-text: #ffffff;
-    out property <color> scrim: #080c0f73;
+    // Flipped with everything else, or the tooltip would vanish into the panel.
+    out property <color> tooltip: #e9e6e4;
+    out property <color> tooltip-text: #211e1d;
+    // Heavier than the light theme's: dimming a dark ground takes more.
+    out property <color> scrim: #00000099;
 
     out property <length> radius-window: 16px;
     out property <length> radius-modal: 14px;
