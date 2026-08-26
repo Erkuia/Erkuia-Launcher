@@ -149,6 +149,7 @@ export component LauncherWindow inherits Window {
                             vertical-stretch: 0;
 
                             ProfileChip {
+                                open: root.profile-open;
                                 signed-in: root.signed-in;
                                 name: root.account-name;
                                 initial: root.account-initial;

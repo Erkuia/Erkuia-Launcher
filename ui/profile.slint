@@ -43,6 +43,8 @@ component Avatar inherits Rectangle {
 }
 
 export component ProfileChip inherits Rectangle {
+    /// Whether the menu this chip opens is currently showing.
+    in property <bool> open;
     in property <bool> signed-in;
     in property <string> name;
     in property <string> initial;
@@ -98,6 +100,7 @@ export component ProfileChip inherits Rectangle {
 
             ChevronDown {
                 color: Theme.tick;
+                flipped: root.open;
             }
         }
     }

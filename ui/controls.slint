@@ -244,13 +244,21 @@ export component Badge inherits Rectangle {
 export component ChevronDown inherits Path {
     in property <brush> color;
 
+    /// Points up instead of down — for a control whose panel is already open.
+    in property <bool> flipped;
+
     width: 7px;
     height: 4px;
     viewbox-x: 0;
     viewbox-y: 0;
     viewbox-width: 7;
     viewbox-height: 4;
-    commands: "M 0 0 L 7 0 L 3.5 4 Z";
+    // The path is swapped rather than the element rotated: a Path has no
+    // vertical flip, and rotating it would need an origin that shifts with the
+    // glyph size.
+    commands: root.flipped
+        ? "M 0 4 L 7 4 L 3.5 0 Z"
+        : "M 0 0 L 7 0 L 3.5 4 Z";
     fill: root.color;
 }
 
