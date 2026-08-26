@@ -4,6 +4,14 @@ use anyhow::Context;
 
 pub const FILE_NAME: &str = "ErkuiaSupport.jar";
 
+/// The id declared in the jar's `fabric.mod.json`.
+///
+/// The real identity of the bundled mod. The file name is only a convention and
+/// drifts — it has already been renamed once, and a stale copy under any name
+/// must still be recognised as ours rather than offered to the player as a mod
+/// they can delete or switch off.
+pub const MOD_ID: &str = "erkuialauncher";
+
 /// What the jar used to be called.
 ///
 /// The mod id inside has not changed, so a copy left over under the old name

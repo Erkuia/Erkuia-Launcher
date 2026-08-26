@@ -104,10 +104,6 @@ pub fn scan(mods_dir: &Path, disabled_dir: &Path, manifest: Option<&Manifest>) -
         }
 
         let known = describe(&file_name);
-        let is_required = crate::bundled::is_bundled(&file_name)
-            || required
-                .iter()
-                .any(|(required_name, _, _)| required_name == &file_name);
 
         let source = if enabled { mods_dir } else { disabled_dir };
         let (id, name, description) = known.unwrap_or_else(|| {
@@ -128,6 +124,16 @@ pub fn scan(mods_dir: &Path, disabled_dir: &Path, manifest: Option<&Manifest>) -
                 metadata.description,
             )
         });
+
+        // Identity first, file name second. Matching only on the name let a jar
+        // left behind under an older name show up as an ordinary local mod,
+        // complete with a delete button and a toggle for something that is not
+        // optional.
+        let is_required = id == crate::bundled::MOD_ID
+            || crate::bundled::is_bundled(&file_name)
+            || required
+                .iter()
+                .any(|(required_name, _, _)| required_name == &file_name);
 
         found.push(ModInfo {
             id,
@@ -608,6 +614,23 @@ mod tests {
         assert!(!required.can_disable());
         assert!(custom.is_removable());
         assert!(custom.can_disable());
+    }
+
+    /// The launcher's own mod must never reach the settings list, whatever the
+    /// jar happens to be called. `local()` is what the screen renders, so a leak
+    /// here is a delete button on something the launcher rewrites on every
+    /// launch.
+    #[test]
+    fn the_bundled_mod_never_shows_up_as_a_local_mod() {
+        let fixture = Fixture::new("bundled-hidden");
+        fixture.put("mods", crate::bundled::FILE_NAME);
+        fixture.put("mods", "custom.jar");
+
+        let entries = fixture.scan(None);
+        let listed = local(&entries);
+
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].file_name, "custom.jar");
     }
 
     #[test]
