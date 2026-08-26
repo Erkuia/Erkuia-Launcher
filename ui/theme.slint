@@ -1,20 +1,38 @@
 export global Theme {
-    out property <color> accent: #0568e9;
-    out property <color> accent-hover: #0a5fd1;
-    out property <color> accent-pressed: #0450b4;
-    out property <color> danger: #e24947;
-    out property <color> heading: #141619;
-    out property <color> body: #66696c;
-    out property <color> muted: #83868a;
-    out property <color> strong: #45484b;
-    out property <color> line: #e2e5e8;
-    out property <color> field-text: #383b3e;
-    out property <color> field-border: #ced1d5;
-    out property <color> field-background: #f7f9fa;
-    out property <color> surface: #fcfdff;
-    out property <color> sidebar: #f2f8f8;
-    out property <color> step-idle-border: #c1c4c8;
-    out property <color> step-idle-text: #7e8084;
-    out property <color> connector-idle: #cbced2;
-    out property <color> frame-border: #d5d8db;
+    // Matches the launcher: a warm near-black ground with panels a step lighter.
+    // The sidebar is the darkest surface, the page beside it sits above it.
+    out property <color> sidebar: #1a1817;
+    out property <color> surface: #211e1d;
+    out property <color> raised: #2b2827;
+    out property <color> frame-border: #423e3c;
+    out property <color> line: #3a3634;
+
+    // The accent is the light thing here, so the primary button is near-white
+    // with dark text on it.
+    out property <color> accent: #e9e6e4;
+    out property <color> accent-hover: #f5f3f1;
+    out property <color> accent-pressed: #d0cdcb;
+    out property <color> on-accent: #211e1d;
+    out property <color> danger: #e2645e;
+    out property <color> danger-pressed: #c9524c;
+
+    // Inverted ramp, brightest first.
+    out property <color> heading: #f5f3f2;
+    out property <color> strong: #cec9c7;
+    out property <color> body: #bdb8b6;
+    out property <color> secondary: #a29d9a;
+    out property <color> muted: #96918e;
+
+    out property <color> field-text: #ddd9d7;
+    out property <color> field-border: #45403e;
+    out property <color> field-background: #1a1817;
+
+    // Hover and press lift off the panel rather than sinking into it, which is
+    // the opposite of what these did while the theme was light.
+    out property <color> control-hover: #35312f;
+    out property <color> control-pressed: #423e3c;
+
+    out property <color> step-idle-border: #4d4846;
+    out property <color> step-idle-text: #8b8683;
+    out property <color> connector-idle: #3d3937;
 }

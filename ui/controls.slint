@@ -1,7 +1,7 @@
 import { Theme } from "theme.slint";
 
 export component CheckGlyph inherits Path {
-    in property <brush> color: #ffffff;
+    in property <brush> color: Theme.on-accent;
     in property <length> thickness: 2px;
 
     viewbox-x: 0;
@@ -38,7 +38,7 @@ export component StepItem inherits VerticalLayout {
 
             Text {
                 text: root.number;
-                color: (root.active || root.done) ? #ffffff : Theme.step-idle-text;
+                color: (root.active || root.done) ? Theme.on-accent : Theme.step-idle-text;
                 font-size: 10px;
                 font-weight: 700;
                 horizontal-alignment: center;
@@ -78,7 +78,7 @@ export component PrimaryButton inherits Rectangle {
 
     label := Text {
         text: root.text;
-        color: #ffffff;
+        color: Theme.on-accent;
         font-size: 12.5px;
         font-weight: 700;
         horizontal-alignment: center;
@@ -102,7 +102,7 @@ export component SecondaryButton inherits Rectangle {
     border-radius: 9px;
     border-width: 1px;
     border-color: Theme.field-border;
-    background: touch-area.pressed ? #eef1f4 : (touch-area.has-hover ? #f5f7f9 : #ffffff);
+    background: touch-area.pressed ? Theme.control-pressed : (touch-area.has-hover ? Theme.control-hover : Theme.raised);
 
     label := Text {
         text: root.text;
@@ -131,7 +131,7 @@ export component TextButton inherits Rectangle {
 
     label := Text {
         text: root.text;
-        color: touch-area.has-hover ? Theme.heading : #6f7275;
+        color: touch-area.has-hover ? Theme.heading : Theme.secondary;
         font-size: 12px;
         font-weight: 700;
         horizontal-alignment: center;
@@ -189,7 +189,7 @@ export component OptionCheckBox inherits Rectangle {
                 border-radius: 5px;
                 border-width: 1.5px;
                 border-color: root.checked ? Theme.accent : Theme.step-idle-border;
-                background: root.checked ? Theme.accent : #ffffff;
+                background: root.checked ? Theme.accent : Theme.raised;
 
                 if root.checked: CheckGlyph {
                     thickness: 2.1px;

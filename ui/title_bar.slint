@@ -8,12 +8,12 @@ component WindowButton inherits Rectangle {
     width: 40px;
     height: 40px;
     background: root.danger
-        ? (touch-area.pressed ? #c02c2c : (touch-area.has-hover ? Theme.danger : transparent))
-        : (touch-area.pressed ? #dfe3e8 : (touch-area.has-hover ? #eceff2 : transparent));
+        ? (touch-area.pressed ? Theme.danger-pressed : (touch-area.has-hover ? Theme.danger : transparent))
+        : (touch-area.pressed ? Theme.control-pressed : (touch-area.has-hover ? Theme.control-hover : transparent));
 
     Text {
         text: root.glyph;
-        color: (root.danger && touch-area.has-hover) ? #ffffff : #6f7275;
+        color: (root.danger && touch-area.has-hover) ? Theme.on-accent : Theme.secondary;
         font-size: 15px;
         font-weight: 500;
         horizontal-alignment: center;
@@ -64,7 +64,7 @@ export component TitleBar inherits Rectangle {
 
         Text {
             text: root.title;
-            color: #616467;
+            color: Theme.body;
             font-size: 11.5px;
             font-weight: 500;
             vertical-alignment: center;
